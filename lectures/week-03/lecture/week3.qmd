@@ -1,0 +1,441 @@
+---
+title: "Data Visualization & Exploratory Analysis"
+subtitle: "Week 3: MUSA 5080"
+author: "Dr. Elizabeth Delmelle"
+date: "September 22, 2025"
+format: 
+  revealjs:
+    theme: simple
+    slide-number: true
+    chalkboard: true
+    code-line-numbers: true
+    incremental: false
+    smaller: true
+---
+
+# Today's Agenda
+
+## What We'll Cover
+
+**Part 1: Why Visualization Matters** 
+
+- Anscombe's Quartet and the limits of summary statistics
+- Visualization in policy context
+- Connection to algorithmic bias and data ethics
+
+**Part 2: Grammar of Graphics** 
+
+- ggplot2 fundamentals
+- Aesthetic mappings and geoms
+- Live demonstration
+
+**Part 3: Exploratory Data Analysis** 
+
+- EDA workflow and principles
+- Understanding distributions and relationships
+- **Critical focus: Data quality and uncertainty**
+
+**Part 4: Data Joins & Integration** 
+
+- Combining datasets with dplyr joins
+
+**Part 5: Hands-On Lab** 
+
+- Guided practice with census data
+- Create publication-ready visualizations
+- **Practice ethical data communication**
+
+---
+
+# Part 1: Why Visualization Matters
+
+## Opening Question
+
+**Think about Assignment 1:**
+
+You created tables showing income reliability patterns across counties. But what if you needed to present these findings to:
+
+- The state legislature (2-minute briefing)
+- Community advocacy groups
+- Local news reporters
+
+**Discussion:** How might visual presentation change the impact of your analysis?
+
+## Anscombe's Quartet: The Famous Example
+
+**Four datasets with identical summary statistics:**
+
+- Same means (x̄ = 9, ȳ = 7.5)
+- Same variances 
+- Same correlation (r = 0.816)
+- Same regression line
+
+**But completely different patterns when visualized**
+
+## The Policy Implications
+
+**Why this matters for your work:**
+
+- **Summary statistics can hide critical patterns**
+- **Outliers may represent important communities**
+- **Relationships aren't always linear**
+- **Visual inspection reveals data quality issues**
+
+**Example:** A county with "average" income might have extreme inequality that algorithms would miss without visualization.
+
+## Connecting Week 2: Ethical Data Communication
+
+**From last week's algorithmic bias discussion:**
+
+**Research finding:** Only **27% of planners** warn users about unreliable ACS data
+- Most planners don't report margins of error
+- Many lack training on statistical uncertainty
+- **This violates AICP Code of Ethics**
+
+**Your responsibility:**
+
+- Create honest, transparent visualizations
+- Always assess and communicate data quality
+- Consider who might be harmed by uncertain data
+
+## Bad Visualizations Have Real Consequences
+
+**Common problems in government data presentation:**
+
+- Misleading scales or axes
+- Cherry-picked time periods  
+- **Hidden or ignored uncertainty**
+- Missing context about data reliability
+
+**Real impact:** 
+The Jurjevich et al. study found that **72% of Portland census tracts** had unreliable child poverty estimates, yet planners rarely communicated this uncertainty.
+
+**Result:** Poor policy decisions based on misunderstood data
+
+---
+
+# Part 2: Grammar of Graphics
+
+## The ggplot2 Philosophy
+
+**Grammar of Graphics principles:**
+
+**Data** → **Aesthetics** → **Geometries** → **Visual**
+
+- **Data:** Your dataset (census data, survey responses, etc.)
+- **Aesthetics:** What variables map to visual properties (x, y, color, size)
+- **Geometries:** How to display the data (points, bars, lines)
+- **Additional layers:** Scales, themes, facets, annotations
+
+## Basic ggplot2 Structure
+
+**Every ggplot has this pattern:**
+
+`ggplot(data = your_data) +
+  aes(x = variable1, y = variable2) +
+  geom_something() +
+  additional_layers()`
+
+
+***You build plots by adding layers with `+`***
+
+## Live Demo: Basic Scatter Plot
+
+```{r demo-scatter}
+library(ggplot2)
+library(tidycensus)
+library(tidyverse)
+# Set your Census API key if you haven't already
+census_api_key(Sys.getenv("CENSUS_API_KEY"))
+# Get some census data for demonstration
+demo_data <- get_acs(
+  geography = "county",
+  variables = c(
+    median_income = "B19013_001",
+    total_pop = "B01003_001"
+  ),
+  state = "PA",
+  year = 2022,
+  output = "wide"
+) %>%
+  mutate(county_name = str_remove(NAME, ", Pennsylvania"))
+
+# Basic scatter plot
+ggplot(demo_data) +
+  aes(x = total_popE, y = median_incomeE) +
+  geom_point()
+```
+
+## Aesthetic Mappings: The Key to ggplot2
+
+**Aesthetics map data to visual properties:**
+
+- `x`, `y` - position
+- `color` - point/line color
+- `fill` - area fill color  
+- `size` - point/line size
+- `shape` - point shape
+- `alpha` - transparency
+
+**Important:** Aesthetics go inside `aes()`, constants go outside
+
+## Improving Plots with Labels and Themes
+
+```{r better-plot}
+ggplot(demo_data) +
+  aes(x = total_popE, y = median_incomeE) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(
+    title = "Income vs Population in Pennsylvania Counties",
+    subtitle = "2018-2022 ACS 5-Year Estimates",
+    x = "Total Population",
+    y = "Median Household Income ($)",
+    caption = "Source: U.S. Census Bureau ACS"
+  ) +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::dollar) +
+  scale_x_continuous(labels = scales::comma)
+```
+
+---
+
+# Part 3: Exploratory Data Analysis
+
+## The EDA Mindset
+
+**Exploratory Data Analysis is detective work:**
+
+1. **What does the data look like?** (distributions, missing values)
+2. **What patterns exist?** (relationships, clusters, trends)  
+3. **What's unusual?** (outliers, anomalies, data quality issues)
+4. **What questions does this raise?** (hypotheses for further investigation)
+5. **How reliable is this data?** 
+
+**Goal:** Understand your data before making decisions or building models
+
+## EDA Workflow with Data Quality Focus
+
+**Enhanced process for policy analysis:**
+
+1. **Load and inspect** - dimensions, variable types, missing data
+2. **Assess reliability** - examine margins of error, calculate coefficients of variation
+3. **Visualize distributions** - histograms, boxplots for each variable
+4. **Explore relationships** - scatter plots, correlations
+5. **Identify patterns** - grouping, clustering, geographical patterns
+6. **Question anomalies** - investigate outliers and unusual patterns
+7. **Document limitations** - prepare honest communication about data quality
+
+## Understanding Distributions
+
+**Why distribution shape matters:**
+
+```{r distribution-demo}
+# Histogram of median income
+ggplot(demo_data) +
+  aes(x = median_incomeE) +
+  geom_histogram(bins = 15, fill = "steelblue", alpha = 0.7) +
+  labs(title = "Distribution of Median Income",
+       x = "Median Household Income", 
+       y = "Number of Counties")
+
+```
+
+**What to look for:** Skewness, outliers, multiple peaks, gaps
+
+## Boxplots!
+
+```{r boxplot}
+# Boxplot to see outliers and quartiles  
+ggplot(demo_data) +
+  aes(y = median_incomeE) +
+  geom_boxplot(fill = "lightblue") +
+  labs(title = "Income Distribution with Outliers",
+       y = "Median Household Income")
+```
+
+## Critical: Data Quality Through Visualization
+
+**Research insight:** Most planners don't visualize or communicate uncertainty
+
+```{r quality-viz}
+# Visualize margins of error - ESSENTIAL for ethical practice
+demo_data %>%
+  mutate(moe_pct = median_incomeM / median_incomeE * 100) %>%
+  ggplot() +
+  aes(x = total_popE, y = moe_pct) +
+  geom_point() +
+  geom_hline(yintercept = 10, color = "red", linetype = "dashed") +
+  labs(title = "Data Reliability by Population Size",
+       x = "Population", 
+       y = "Margin of Error (%)",
+       caption = "Red line = 10% threshold for reliability")
+```
+
+**Pattern:** Smaller populations have higher uncertainty
+**Ethical implication:** These communities might be systematically undercounted
+
+## Research-Based Recommendations for Planners
+
+**Jurjevich et al. (2018): 5 Essential Guidelines for Using ACS Data**
+
+1. **Report the corresponding MOEs of ACS estimates** - Always include margin of error values
+2. **Include a footnote when not reporting MOEs** - Explicitly acknowledge omission  
+3. **Provide context for (un)reliability** - Use coefficient of variation (CV):
+   - CV < 12% = reliable (green coding)
+   - CV 12-40% = somewhat reliable (yellow)
+   - CV > 40% = unreliable (red coding)
+4. **Reduce statistical uncertainty** - Collapse data detail, aggregate geographies, use multi-year estimates
+5. **Always conduct statistical significance tests** when comparing ACS estimates over time
+
+**Key insight:** These practices are not just technical best practices—they are **ethical requirements** under the AICP Code of Ethics
+
+## EDA for Policy Analysis
+
+**Key questions for census data:**
+
+- **Geographic patterns:** Are problems concentrated in certain areas?
+- **Population relationships:** How does size affect data quality?
+- **Demographic patterns:** Are certain communities systematically different?
+- **Temporal trends:** How do patterns change over time?
+- **Data integrity:** Where might survey bias affect results?
+- **Reliability assessment:** Which estimates should we trust?
+
+---
+
+# Part 4: Data Joins & Integration
+
+## Why Join Data?
+
+**To combining datasets of course:**
+
+- Census demographics + Economic indicators
+- Survey responses + Geographic boundaries  
+- Current data + Historical trends
+- Administrative records + Survey data
+
+## Types of Joins (tabular)
+
+**Four main types in dplyr:**
+
+- `left_join()` - Keep all rows from left dataset
+- `right_join()` - Keep all rows from right dataset  
+- `inner_join()` - Keep only rows that match in both
+- `full_join()` - Keep all rows from both datasets
+
+**Most common:** `left_join()` to add columns to your main dataset
+
+## Live Demo: Joining Census Tables
+
+```{r join-demo}
+# Get income data
+income_data <- get_acs(
+  geography = "county",
+  variables = "B19013_001",
+  state = "PA", 
+  year = 2022,
+  output = "wide"
+) %>%
+  select(GEOID, NAME, median_income = B19013_001E, income_moe = B19013_001M)
+
+# Get education data  
+education_data <- get_acs(
+  geography = "county",
+  variables = "B15003_022",  # Bachelor's degree or higher
+  state = "PA",
+  year = 2022, 
+  output = "wide"
+) %>%
+  select(GEOID, college_pop = B15003_022E, college_moe = B15003_022M)
+
+# Join them together
+combined_data <- income_data %>%
+  left_join(education_data, by = "GEOID")
+
+head(combined_data)
+```
+
+## Checking Join Results and Data Quality
+
+**Always verify joins AND assess combined reliability:**
+
+```{r join-check}
+# Check dimensions
+cat("Income data rows:", nrow(income_data), "\n")
+cat("Education data rows:", nrow(education_data), "\n") 
+cat("Combined data rows:", nrow(combined_data), "\n")
+
+# Check for missing values after join
+combined_data %>%
+  summarize(
+    missing_income = sum(is.na(median_income)),
+    missing_education = sum(is.na(college_pop))
+  )
+
+# IMPORTANT: Assess reliability of joined data
+combined_data %>%
+  mutate(
+    income_cv = (income_moe / median_income) * 100,
+    college_cv = (college_moe / college_pop) * 100
+  ) %>%
+  select(NAME, income_cv, college_cv) %>%
+  head()
+```
+
+---
+
+# Part 5: Hands-On Lab Introduction
+
+## Lab Structure for Today
+
+**You'll work through six exercises:**
+
+1. **Finding Census Variables** - Learn to search for the data you need
+2. **Single Variable EDA** - Explore distributions and identify outliers
+3. **Two Variable Relationships** - Create meaningful scatter plots
+4. **Data Quality Visualization** - **Practice ethical uncertainty communication**
+5. **Multiple Variables** - Color, faceting, and complex relationships
+6. **Data Integration** - Join datasets and create publication-ready visualizations
+
+## Skills You'll Practice
+
+**ggplot2 fundamentals:**
+
+- Scatter plots, histograms, boxplots
+- Aesthetic mappings and customization
+- Professional themes and labels
+
+**EDA workflow:**
+
+- Distribution analysis
+- Outlier detection  
+- Pattern identification
+
+**Ethical data practice:**
+
+- Visualizing and reporting margins of error
+- Using coefficient of variation to assess reliability
+
+## Connection to Professional Ethics
+
+**By the end of today, you'll be able to:**
+
+- Visually assess data quality issues
+- Create compelling presentations of demographic patterns
+- Communicate statistical uncertainty ethically and clearly
+- Integrate multiple data sources 
+
+---
+
+# Getting Started
+
+## Questions Before We Begin?
+
+**Ready for hands-on practice?**
+
+**Remember:** Today's skills build directly on Week 1-2 foundations:
+
+- Same dplyr functions, now with visualization
+- Same census data concepts, now with multiple tables
+
+*Let's create some beautiful graphs*

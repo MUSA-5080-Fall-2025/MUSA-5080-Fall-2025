@@ -1,0 +1,932 @@
+---
+title: "Week 3 In-Class Lab: Data Visualization and EDA"
+author: "Elizabeth Delmelle"
+date: today
+format: 
+  html:
+    code-fold: false
+    toc: true
+    toc-location: left
+    theme: cosmo
+execute:
+  warning: false
+  message: false
+editor: 
+  markdown: 
+    wrap: 72
+---
+
+## Setup and Data Loading
+
+```{r}
+# Load required packages
+library(tidyverse)
+library(tidycensus)
+library(scales)
+library(RColorBrewer)
+# Set your Census API key if you haven't already
+census_api_key(Sys.getenv("CENSUS_API_KEY"))
+
+# We'll use Pennsylvania data for consistency with previous weeks
+state_choice <- "PA"
+```
+
+------------------------------------------------------------------------
+
+## Exercise 0: Finding Census Variable Codes
+
+**The Challenge:** You know you want data on total population, median
+income, and median age, but you don't know the specific Census variable
+codes. How do you find them?
+
+### 0.1 Load the Variable Dictionary
+
+```{r}
+# Load all available variables for ACS 5-year 2022
+acs_vars_2022 <- load_variables(2022, "acs5", cache = TRUE)
+
+# Look at the structure
+glimpse(acs_vars_2022)
+head(acs_vars_2022)
+```
+
+**What you see:**
+
+-   `name`: The variable code (e.g., "B01003_001")
+-   `label`: Human-readable description
+-   `concept`: The broader table this variable belongs to
+
+### 0.2 Search for Population Variables
+
+**Your Task:** Find the variable code for total population.
+
+```{r}
+# Search for population-related variables
+population_vars <- acs_vars_2022 %>%
+  filter(str_detect(label, "Total.*population"))
+
+# Look at the results
+head(population_vars, 10)
+
+# Or search in the concept field
+pop_concept <- acs_vars_2022 %>%
+  filter(str_detect(concept, "Total Population"))
+
+head(pop_concept)
+```
+
+**Tip:** Look for "Total" followed by "population" - usually
+`B01003_001`
+
+### 0.3 Search for Income Variables
+
+**Your Task:** Find median household income variables.
+
+```{r}
+# Search for median income
+income_vars <- acs_vars_2022 %>%
+  filter(str_detect(label, "[Mm]edian.*income"))
+
+# Look specifically for household income
+household_income <- income_vars %>%
+  filter(str_detect(label, "household"))
+
+print("Household income variables:")
+head(household_income)
+
+# Alternative: search by concept
+income_concept <- acs_vars_2022 %>%
+  filter(str_detect(concept, "Median Household Income"))
+
+head(income_concept)
+```
+
+**Pattern Recognition:** Median household income is typically
+`B19013_001`
+
+### 0.4 Search for Age Variables
+
+**Your Task:** Find median age variables.
+
+\[write the code below - first add a code chunk\]
+
+### 0.5 Advanced Search Techniques
+
+**Your Task:** Learn more sophisticated search methods.
+
+```{r}
+# Search for multiple terms at once
+housing_vars <- acs_vars_2022 %>%
+  filter(str_detect(label, "[Mm]edian.*(rent|value)"))
+
+print("Housing cost variables:")
+head(housing_vars, 10)
+
+# Search excluding certain terms
+income_not_family <- acs_vars_2022 %>%
+  filter(str_detect(label, "[Mm]edian.*income") & 
+         !str_detect(label, "family"))
+
+print("Income variables (not family income):")
+head(income_not_family)
+
+# Case-insensitive search using regex
+education_vars <- acs_vars_2022 %>%
+  filter(str_detect(label, regex("bachelor", ignore_case = TRUE)))
+
+print("Education variables:")
+head(education_vars, 5)
+```
+
+### 0.6 Interactive Exploration
+
+**Your Task:** Use RStudio's viewer for easier searching.
+
+```{r}
+# Open the full variable list in RStudio viewer
+# This opens a searchable data table
+View(acs_vars_2022)
+
+# Pro tip: You can also search specific table groups
+# B01 = Age and Sex
+# B19 = Income  
+# B25 = Housing
+table_b19 <- acs_vars_2022 %>%
+  filter(str_detect(name, "^B19"))  # ^ means "starts with"
+
+print("All B19 (Income) table variables:")
+head(table_b19, 10)
+
+```
+
+### 0.7 Verify Your Variable Choices
+
+**Your Task:** Test your variables by getting a small sample of data.
+
+```{r}
+# Test the variables you found
+test_vars <- c(
+  total_pop = "B01003_001",      # Total population
+  median_income = "B19013_001",  # Median household income
+  median_age = "B01002_001"      # Median age
+)
+
+# Get data for just one state to test
+test_data <- get_acs(
+  geography = "state",
+  variables = test_vars,
+  state = "PA",
+  year = 2022
+)
+
+# Check that you got what you expected
+test_data
+```
+
+### 0.8 Common Variable Patterns
+
+**Reference guide for future use:**
+
+```{r}
+# Common patterns to remember:
+common_variables <- tribble(
+  ~concept, ~typical_code, ~description,
+  "Total Population", "B01003_001", "Total population",
+  "Median Age", "B01002_001", "Median age of population", 
+  "Median HH Income", "B19013_001", "Median household income",
+  "White Population", "B03002_003", "White alone population",
+  "Black Population", "B03002_004", "Black/African American alone",
+  "Hispanic Population", "B03002_012", "Hispanic or Latino population",
+  "Bachelor's Degree", "B15003_022", "Bachelor's degree or higher",
+  "Median Rent", "B25058_001", "Median contract rent",
+  "Median Home Value", "B25077_001", "Median value owner-occupied"
+)
+
+print("Common Census Variables:")
+common_variables
+```
+
+**Key Tips for Variable Hunting:**
+
+1.  **Start with concepts** - search for the topic you want (income,
+    age, housing)
+2.  **Look for "Median"** vs "Mean" - median is usually more
+    policy-relevant
+3.  **Check the universe** - some variables are for "households," others
+    for "population"
+4.  **Test with small data** before running large queries
+5.  **Bookmark useful variables** for future projects (type them in your
+    weekly notes!)
+
+## Exercise 1: Single Variable EDA
+
+### 1.1 Load and Inspect Data
+
+```{r}
+# Get county-level data for your state
+county_data <- get_acs(
+  geography = "county",
+  variables = c(
+    total_pop = "B01003_001",       # Total population
+    median_income = "B19013_001",   # Median household income
+    median_age = "B01002_001"       # Median age
+  ),
+  state = state_choice,
+  year = 2022,
+  output = "wide"
+)
+
+# Clean county names
+county_data <- county_data %>%
+  mutate(county_name = str_remove(NAME, paste0(", ", state_choice)))
+
+# Basic inspection
+glimpse(county_data)
+```
+
+### 1.2 Explore Income Distribution
+
+**Your Task:** Create a histogram of median household income and
+describe what you see.
+
+```{r}
+# Create histogram of median income
+ggplot(county_data) +
+  aes(x = median_incomeE) +
+  geom_histogram(bins = 15, fill = "steelblue", alpha = 0.7) +
+  labs(
+    title = "Distribution of Median Household Income",
+    x = "Median Household Income ($)",
+    y = "Number of Counties"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(labels = dollar)
+```
+
+### 1.3 Box Plot for Outlier Detection
+
+**Your Task:** Create a boxplot to identify specific outlier counties.
+
+```{r}
+# Box plot to see outliers clearly
+ggplot(county_data) +
+  aes(y = median_incomeE) +
+  geom_boxplot(fill = "lightblue", width = 0.5) +
+  labs(
+    title = "Median Income Distribution with Outliers",
+    y = "Median Household Income ($)"
+  ) +
+  theme_minimal() +
+  scale_y_continuous(labels = dollar)
+
+# Identify the outlier counties
+income_outliers <- county_data %>%
+  mutate(
+    Q1 = quantile(median_incomeE, 0.25, na.rm = TRUE),
+    Q3 = quantile(median_incomeE, 0.75, na.rm = TRUE),
+    IQR = Q3 - Q1,
+    outlier = median_incomeE < (Q1 - 1.5 * IQR) | median_incomeE > (Q3 + 1.5 * IQR)
+  ) %>%
+  filter(outlier) %>%
+  select(county_name, median_incomeE)
+
+print("Outlier counties:")
+income_outliers
+```
+
+### 1.4 Challenge Exercise: Population Distribution
+
+**Your Task:** Create your own visualization of population distribution
+and identify outliers.
+
+**Requirements:**
+
+-   Create a histogram of total population (`total_popE`)
+-   Use a different color than the income example (try "darkgreen" or
+    "purple")
+-   Add appropriate labels and title
+-   Create a boxplot to identify population outliers
+-   Find and list the 3 most populous and 3 least populous counties
+
+------------------------------------------------------------------------
+
+## Exercise 2: Two Variable Relationships
+
+### 2.1 Population vs Income Scatter Plot
+
+**Your Task:** Explore the relationship between population size and
+median income.
+
+```{r}
+# Basic scatter plot
+ggplot(county_data) +
+  aes(x = total_popE, y = median_incomeE) +
+  geom_point() +
+  labs(
+    title = "Population vs Median Income",
+    x = "Total Population",
+    y = "Median Household Income ($)"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(labels = comma) +
+  scale_y_continuous(labels = dollar)
+```
+
+### 2.2 Add Trend Line and Labels
+
+**Your Task:** Improve the plot by adding a trend line and labeling
+interesting points.
+
+```{r}
+# Enhanced scatter plot with trend line
+ggplot(county_data) +
+  aes(x = total_popE, y = median_incomeE) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, color = "red") +
+  labs(
+    title = "Population vs Median Income in Pennsylvania Counties",
+    subtitle = "2018-2022 ACS 5-Year Estimates",
+    x = "Total Population",
+    y = "Median Household Income ($)",
+    caption = "Source: U.S. Census Bureau"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(labels = comma) +
+  scale_y_continuous(labels = dollar)
+
+# Calculate correlation
+correlation <- cor(county_data$total_popE, county_data$median_incomeE, use = "complete.obs")
+print(paste("Correlation coefficient:", round(correlation, 3)))
+```
+
+### 2.3 Deal with Skewed Data
+
+**Your Task:** The population data is highly skewed. Try a log
+transformation.
+
+```{r}
+# Log-transformed scatter plot
+ggplot(county_data) +
+  aes(x = log(total_popE), y = median_incomeE) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(
+    title = "Log(Population) vs Median Income",
+    x = "Log(Total Population)",
+    y = "Median Household Income ($)"
+  ) +
+  theme_minimal() +
+  scale_y_continuous(labels = dollar)
+```
+
+**Question:** Does the log transformation reveal a clearer relationship?
+
+### 2.4 Challenge Exercise: Age vs Income Relationship
+
+**Your Task:** Explore the relationship between median age and median
+income using different visualization techniques.
+
+**Requirements:**
+
+-   Create a scatter plot with median age on x-axis and median income on
+    y-axis
+-   Use red points (`color = "red"`) with 50% transparency
+    (`alpha = 0.5`)
+-   Add a smooth trend line using `method = "loess"` instead of "lm"
+-   Use the "dark" theme (`theme_dark()`)
+-   Format the y-axis with dollar signs
+-   Add a title that mentions both variables
+
+------------------------------------------------------------------------
+
+## Exercise 3: Data Quality Visualization 
+
+### 3.1 Visualize Margins of Error
+
+**Your Task:** Create a visualization showing how data reliability
+varies across counties.
+
+```{r}
+# Calculate MOE percentages
+county_reliability <- county_data %>%
+  mutate(
+    income_moe_pct = (median_incomeM / median_incomeE) * 100,
+    pop_category = case_when(
+      total_popE < 50000 ~ "Small (<50K)",
+      total_popE < 200000 ~ "Medium (50K-200K)",
+      TRUE ~ "Large (200K+)"
+    )
+  )
+
+# MOE by population size
+ggplot(county_reliability) +
+  aes(x = total_popE, y = income_moe_pct) +
+  geom_point(alpha = 0.7) +
+  geom_hline(yintercept = 10, color = "red", linetype = "dashed") +
+  labs(
+    title = "Data Reliability Decreases with Population Size",
+    x = "Total Population",
+    y = "Margin of Error (%)",
+    caption = "Red line = 10% reliability threshold"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(labels = comma)
+```
+
+### 3.2 Compare Reliability by County Size
+
+**Your Task:** Use box plots to compare MOE across county size
+categories.
+
+```{r}
+# Box plots by population category
+ggplot(county_reliability) +
+  aes(x = pop_category, y = income_moe_pct, fill = pop_category) +
+  geom_boxplot() +
+  labs(
+    title = "Data Reliability by County Size Category",
+    x = "Population Category",
+    y = "Margin of Error (%)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")  # Remove legend since x-axis is clear
+```
+
+### 3.3 Challenge Exercise: Age Data Reliability
+
+**Your Task:** Analyze the reliability of median age data across
+counties.
+
+**Requirements:** 
+
+- Calculate MOE percentage for median age
+(`median_ageM / median_ageE * 100`) 
+- Create a scatter plot showing
+population vs age MOE percentage 
+- Use purple points
+(`color = "purple"`) with size = 2 
+- Add a horizontal line at 5% MOE
+using `geom_hline()` with a blue dashed line 
+- Use `theme_classic()`instead of `theme_minimal()` 
+- Create a boxplot comparing age MOE across the three population categories
+
+------------------------------------------------------------------------
+
+## Exercise 4: Multiple Variables with Color and Faceting 
+
+### 4.1 Three-Variable Scatter Plot
+
+**Your Task:** Add median age as a color dimension to the
+population-income relationship.
+
+```{r}
+# Three-variable scatter plot
+ggplot(county_data) +
+  aes(x = total_popE, y = median_incomeE, color = median_ageE) +
+  geom_point(size = 2, alpha = 0.7) +
+  scale_color_viridis_c(name = "Median\nAge") +
+  labs(
+    title = "Population, Income, and Age Patterns",
+    x = "Total Population",
+    y = "Median Household Income ($)"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(labels = comma) +
+  scale_y_continuous(labels = dollar)
+```
+
+### 4.2 Create Categories for Faceting
+
+**Your Task:** Create age categories and use faceting to compare
+patterns.
+
+```{r}
+# Create age categories and faceted plot
+county_faceted <- county_data %>%
+  mutate(
+    age_category = case_when(
+      median_ageE < 40 ~ "Young (< 40)",
+      median_ageE < 45 ~ "Middle-aged (40-45)",
+      TRUE ~ "Older (45+)"
+    )
+  )
+
+ggplot(county_faceted) +
+  aes(x = total_popE, y = median_incomeE) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~age_category) +
+  labs(
+    title = "Population-Income Relationship by Age Profile",
+    x = "Total Population",
+    y = "Median Income ($)"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(labels = comma) +
+  scale_y_continuous(labels = dollar)
+```
+
+**Question:** Do the relationships between population and income differ
+by age profile?
+
+**Your Task:** Create a visualization using income categories and multiple aesthetic mappings.
+
+**Requirements:** 
+
+- Create income categories: "Low" (\<\$50k), "Middle"
+(\$50k-\$80k), "High" (\>\$80k) 
+- Make a scatter plot with population (x) vs median age (y) - Color points by income category 
+- Size points by the margin of error for income (`median_incomeM`) 
+- Use the "Set2" color palette: `scale_color_brewer(palette = "Set2")` **note: you'll need to load the `RColorBrewer` package for this`
+- Facet by income category using `facet_wrap()` 
+- Use `theme_bw()` theme
+
+------------------------------------------------------------------------
+
+## Exercise 5: Data Joins and Integration 
+
+### 5.1 Get Additional Census Data
+
+**Your Task:** Load educational attainment data and join it with our
+existing data.
+
+```{r}
+# Get educational attainment data
+education_data <- get_acs(
+  geography = "county",
+  variables = c(
+    total_25plus = "B15003_001",    # Total population 25 years and over
+    bachelor_plus = "B15003_022"    # Bachelor's degree or higher
+  ),
+  state = state_choice,
+  year = 2022,
+  output = "wide"
+) %>%
+  mutate(
+    pct_college = (bachelor_plusE / total_25plusE) * 100,
+    county_name = str_remove(NAME, paste0(", ", state_choice))
+  ) %>%
+  select(GEOID, county_name, pct_college)
+
+# Check the data
+head(education_data)
+```
+
+### 5.2 Join the Datasets
+
+**Your Task:** Join the education data with our main county dataset.
+
+```{r}
+# Perform the join
+combined_data <- county_data %>%
+  left_join(education_data, by = "GEOID")
+
+# Check the join worked
+cat("Original data rows:", nrow(county_data), "\n")
+cat("Combined data rows:", nrow(combined_data), "\n")
+cat("Missing education data:", sum(is.na(combined_data$pct_college)), "\n")
+
+# View the combined data
+head(combined_data)
+```
+
+### 5.3 Analyze the New Relationship
+
+**Your Task:** Explore the relationship between education and income.
+
+```{r}
+# Education vs Income scatter plot
+ggplot(combined_data) +
+  aes(x = pct_college, y = median_incomeE) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(
+    title = "Education vs Income Across Counties",
+    x = "Percent with Bachelor's Degree or Higher",
+    y = "Median Household Income ($)"
+  ) +
+  theme_minimal() +
+  scale_y_continuous(labels = dollar)
+
+# Calculate correlation
+edu_income_cor <- cor(combined_data$pct_college, combined_data$median_incomeE, use = "complete.obs")
+print(paste("Education-Income Correlation:", round(edu_income_cor, 3)))
+```
+
+### 5.4 Get Housing Data and Triple Join
+
+**Your Task:** Add housing cost data to create a three-way analysis.
+
+```{r}
+# Get housing cost data
+housing_data <- get_acs(
+  geography = "county",
+  variables = c(
+    median_rent = "B25058_001",     # Median contract rent
+    median_home_value = "B25077_001" # Median value of owner-occupied units
+  ),
+  state = state_choice,
+  year = 2022,
+  output = "wide"
+) %>%
+  select(GEOID, median_rent = median_rentE, median_home_value = median_home_valueE)
+
+# Join all three datasets
+full_data <- combined_data %>%
+  left_join(housing_data, by = "GEOID")
+
+# Create a housing affordability measure
+full_data <- full_data %>%
+  mutate(
+    rent_to_income = (median_rent * 12) / median_incomeE * 100,
+    income_category = case_when(
+      median_incomeE < 50000 ~ "Low Income",
+      median_incomeE < 80000 ~ "Middle Income",
+      TRUE ~ "High Income"
+    )
+  )
+
+head(full_data)
+```
+
+### 5.5 Advanced Multi-Variable Analysis
+
+**Your Task:** Create a comprehensive visualization showing multiple
+relationships.
+
+```{r}
+# Complex multi-variable plot
+ggplot(full_data) +
+  aes(x = pct_college, y = rent_to_income, 
+      color = income_category, size = total_popE) +
+  geom_point(alpha = 0.7) +
+  labs(
+    title = "Education, Housing Affordability, and Income Patterns",
+    subtitle = "Larger points = larger population",
+    x = "Percent with Bachelor's Degree or Higher",
+    y = "Annual Rent as % of Median Income",
+    color = "Income Category",
+    size = "Population"
+  ) +
+  theme_minimal() +
+  guides(size = guide_legend(override.aes = list(alpha = 1)))
+```
+
+## Exercise 6: Publication-Ready Visualization
+
+### 6.1 Create a Policy-Focused Visualization
+
+**Your Task:** Combine multiple visualizations to tell a more complete story about county characteristics.
+
+```{r}
+# Create a multi-panel figure
+library(patchwork)  # For combining plots
+
+# Plot 1: Income distribution
+p1 <- ggplot(full_data) +
+  aes(x = median_incomeE) +
+  geom_histogram(bins = 15, fill = "steelblue", alpha = 0.7) +
+  labs(title = "A) Income Distribution", 
+       x = "Median Income ($)", y = "Counties") +
+  scale_x_continuous(labels = dollar) +
+  theme_minimal()
+
+# Plot 2: Education vs Income
+p2 <- ggplot(full_data) +
+  aes(x = pct_college, y = median_incomeE) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "B) Education vs Income",
+       x = "% College Educated", y = "Median Income ($)") +
+  scale_y_continuous(labels = dollar) +
+  theme_minimal()
+
+# Plot 3: Housing affordability by income category
+p3 <- ggplot(full_data) +
+  aes(x = income_category, y = rent_to_income, fill = income_category) +
+  geom_boxplot() +
+  labs(title = "C) Housing Affordability by Income",
+       x = "Income Category", y = "Rent as % of Income") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# Plot 4: Data reliability by population
+p4 <- ggplot(county_reliability) +
+  aes(x = total_popE, y = income_moe_pct) +
+  geom_point(alpha = 0.7) +
+  geom_hline(yintercept = 10, color = "red", linetype = "dashed") +
+  labs(title = "D) Data Reliability",
+       x = "Population", y = "MOE (%)") +
+  scale_x_continuous(labels = comma) +
+  theme_minimal()
+
+# Combine all plots
+combined_plot <- (p1 | p2) / (p3 | p4)
+combined_plot + plot_annotation(
+  title = "Pennsylvania County Analysis: Income, Education, and Housing Patterns",
+  caption = "Source: American Community Survey 2018-2022"
+)
+```
+
+## Exercise 7: Ethical Data Communication - Implementing Research Recommendations
+
+**Background:** Research by Jurjevich et al. (2018) found that only 27%
+of planners warn users about unreliable ACS data, violating AICP ethical
+standards. In this exercise, you'll practice the five research-based
+guidelines for ethical ACS data communication.
+
+### 7.1 Create Professional Data Tables with Uncertainty
+
+**Your Task:** Follow the Jurjevich et al. guidelines to create an
+ethical data presentation.
+
+```{r}
+# Get comprehensive data for ethical analysis
+ethical_demo_data <- get_acs(
+  geography = "county",
+  variables = c(
+    median_income = "B19013_001",   # Median household income
+    total_25plus = "B15003_001",    # Total population 25 years and over
+    bachelor_plus = "B15003_022",   # Bachelor's degree or higher
+    total_pop = "B01003_001"        # Total population
+  ),
+  state = state_choice,
+  year = 2022,
+  output = "wide"
+) %>%
+  mutate(
+    # Calculate derived statistics
+    pct_college = (bachelor_plusE / total_25plusE) * 100,
+    
+    # Calculate MOE for percentage using error propagation
+    pct_college_moe = pct_college * sqrt((bachelor_plusM/bachelor_plusE)^2 + (total_25plusM/total_25plusE)^2),
+    
+    # Calculate coefficient of variation for all key variables
+    income_cv = (median_incomeM / median_incomeE) * 100,
+    education_cv = (pct_college_moe / pct_college) * 100,
+    
+    # Create reliability categories based on CV
+    income_reliability = case_when(
+      income_cv < 12 ~ "High",
+      income_cv <= 40 ~ "Moderate", 
+      TRUE ~ "Low"
+    ),
+    
+    education_reliability = case_when(
+      education_cv < 12 ~ "High",
+      education_cv <= 40 ~ "Moderate",
+      TRUE ~ "Low"
+    ),
+    
+    # Create color coding for reliability
+    income_color = case_when(
+      income_reliability == "High" ~ "🟢",
+      income_reliability == "Moderate" ~ "🟡",
+      TRUE ~ "🔴"
+    ),
+    
+    education_color = case_when(
+      education_reliability == "High" ~ "🟢",
+      education_reliability == "Moderate" ~ "🟡", 
+      TRUE ~ "🔴"
+    ),
+    
+    # Clean county names
+    county_name = str_remove(NAME, paste0(", ", state_choice))
+  )
+
+# Create ethical data table focusing on least reliable estimates
+ethical_data_table <- ethical_demo_data %>%
+  select(county_name, median_incomeE, median_incomeM, income_cv, income_color,
+         pct_college, pct_college_moe, education_cv, education_color) %>%
+  arrange(desc(income_cv)) %>%  # Show least reliable first
+  slice_head(n = 10)
+
+# Create professional table following guidelines
+library(knitr)
+library(kableExtra)
+
+ethical_data_table %>%
+  select(county_name, median_incomeE, median_incomeM, income_cv, income_color) %>%
+  kable(
+    col.names = c("County", "Median Income", "Margin of Error", 
+                  "CV (%)", "Reliability"),
+    caption = "Pennsylvania Counties: Median Household Income with Statistical Uncertainty",
+    format.args = list(big.mark = ",")
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover")) %>%
+  footnote(
+    general = c("Coefficient of Variation (CV) indicates reliability:",
+                "🟢 High reliability (CV < 12%)",
+                "🟡 Moderate reliability (CV 12-40%)", 
+                "🔴 Low reliability (CV > 40%)",
+                "Following Jurjevich et al. (2018) research recommendations",
+                "Source: American Community Survey 2018-2022 5-Year Estimates"),
+    general_title = "Notes:"
+  )
+```
+
+### 7.3 Now try Census Tracts
+
+```{r}
+# Get census tract poverty data for Philadelphia
+philly_poverty <- get_acs(
+    geography = "tract",
+    variables = c(
+      poverty_pop = "B17001_001",     
+      poverty_below = "B17001_002"    
+    ),
+    state = "PA",
+    county = "101",
+    year = 2022,
+    output = "wide"
+  ) %>%
+  filter(poverty_popE > 0) %>%  # Remove tracts with no poverty data
+  mutate(
+    # Calculate poverty rate and its MOE
+    poverty_rate = (poverty_belowE / poverty_popE) * 100,
+    
+    # MOE for derived percentage using error propagation
+    poverty_rate_moe = poverty_rate * sqrt((poverty_belowM/poverty_belowE)^2 + (poverty_popM/poverty_popE)^2),
+    
+    # Coefficient of variation
+    poverty_cv = (poverty_rate_moe / poverty_rate) * 100,
+    
+    # Reliability assessment
+    reliability = case_when(
+      poverty_cv < 12 ~ "High",
+      poverty_cv <= 40 ~ "Moderate",
+      poverty_cv <= 75 ~ "Low",
+      TRUE ~ "Very Low"
+    ),
+    
+    # Color coding
+    reliability_color = case_when(
+      reliability == "High" ~ "🟢",
+      reliability == "Moderate" ~ "🟡",
+      reliability == "Low" ~ "🟠",
+      TRUE ~ "🔴"
+    ),
+    
+    # Population size categories
+    pop_category = case_when(
+      poverty_popE < 500 ~ "Very Small (<500)",
+      poverty_popE < 1000 ~ "Small (500-1000)",
+      poverty_popE < 1500 ~ "Medium (1000-1500)",
+      TRUE ~ "Large (1500+)"
+    )
+  )
+
+# Check the data quality crisis at tracts
+reliability_summary <- philly_poverty %>%
+  count(reliability) %>%
+  mutate(
+    percentage = round(n / sum(n) * 100, 1),
+    total_bg = sum(n)
+  )
+
+print("Philadelphia Census Tract Poverty Data Reliability:")
+reliability_summary %>%
+  kable(
+    col.names = c("Data Quality", "Number of Tracts", "Percentage", "Total"),
+    caption = "The Data Quality Crisis: Philadelphia Census Tract Poverty Estimates"
+  ) %>%
+  kable_styling()
+```
+
+```{r}
+# Show the most problematic estimates (following Guideline 3: provide context)
+worst_estimates <- philly_poverty %>%
+  filter(reliability %in% c("Low", "Very Low")) %>%
+  arrange(desc(poverty_cv)) %>%
+  slice_head(n = 10)
+
+worst_estimates %>%
+  select(GEOID, poverty_rate, poverty_rate_moe, poverty_cv, reliability_color, poverty_popE) %>%
+  kable(
+    col.names = c("Tract", "Poverty Rate (%)", "MOE", "CV (%)", "Quality", "Pop Size"),
+    caption = "Guideline 3: Tracts with Least Reliable Poverty Estimates",
+    digits = c(0, 1, 1, 1, 0, 0)
+  ) %>%
+  kable_styling() %>%
+  footnote(
+    general = c("These estimates should NOT be used for policy decisions",
+                "CV > 75% indicates very low reliability",
+                "Recommend aggregation or alternative data sources")
+  )
+```
+
+## Key References and Acknowledgments
+
+Jurjevich, J. R., Griffin, A. L., Spielman, S. E., Folch, D. C.,
+Merrick, M., & Nagle, N. N. (2018). Navigating statistical uncertainty:
+How urban and regional planners understand and work with American
+community survey (ACS) data for guiding policy. *Journal of the American
+Planning Association*, *84*(2), 112-126.
+
+Walker, K. (2023). *Analyzing US Census Data: Methods, Maps, and Models
+in R*. Available at: https://walker-data.com/census-r/
+
+**AI Acknowledgments:** This lab was developed with coding assistance
+from Claude AI. I have run, reviewed, and edited the final version. Any
+remaining errors are my own.
