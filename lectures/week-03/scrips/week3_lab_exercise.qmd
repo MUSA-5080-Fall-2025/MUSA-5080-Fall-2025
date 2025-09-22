@@ -25,7 +25,7 @@ library(tidycensus)
 library(scales)
 library(RColorBrewer)
 # Set your Census API key if you haven't already
-census_api_key(Sys.getenv("CENSUS_API_KEY"))
+census_api_key(Sys.getenv("e17c1c6ce413dc3faca31a17a58ab3374404bb9e"))
 
 # We'll use Pennsylvania data for consistency with previous weeks
 state_choice <- "PA"
@@ -109,6 +109,21 @@ head(income_concept)
 **Your Task:** Find median age variables.
 
 \[write the code below - first add a code chunk\]
+
+age_vars <- acs_vars_2022 %>%
+  filter(str_detect(label, "[Mm]edian.*age"))
+
+household_age <- age_vars %>%
+  filter(str_detect(label, "Median Age"))
+
+print("Household age variables:")
+head(household_age)
+
+age_concept <- acs_vars_2022 %>%
+  filter(str_detect(concept, "Median Household Age"))
+
+head(age_concept)
+
 
 ### 0.5 Advanced Search Techniques
 
@@ -308,6 +323,30 @@ and identify outliers.
 -   Create a boxplot to identify population outliers
 -   Find and list the 3 most populous and 3 least populous counties
 
+ggplot(county_data) +
+  aes(y = total_popE) +
+  geom_boxplot(fill = "darkgreen", width = 0.5) +
+  labs(
+    title = "Total Population Distribution with Outliers",
+    y = "Total Population"
+  ) +
+  theme_minimal() 
+
+pop_outliers <- county_data %>%
+  mutate(
+    Q1 = quantile(total_popE, 0.25, na.rm = TRUE),
+    Q3 = quantile(total_popE, 0.75, na.rm = TRUE),
+    IQR = Q3 - Q1,
+    outlier = total_popE < (Q1 - 1.5 * IQR) | total_popE > (Q3 + 1.5 * IQR)
+  ) %>%
+  filter(outlier) %>%
+  select(county_name, total_popE)
+
+print("Outlier counties:")
+pop_outliers
+
+
+
 ------------------------------------------------------------------------
 
 ## Exercise 2: Two Variable Relationships
@@ -397,6 +436,18 @@ income using different visualization techniques.
 -   Format the y-axis with dollar signs
 -   Add a title that mentions both variables
 
+ggplot(county_data) +
+  aes(x = median_ageE, y = median_incomeE) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = TRUE, color = "red") +
+  labs(
+    title = "Median Age vs Median Income",
+    x = "Median Age",
+    y = "Median Household Income ($)"
+  ) +
+  theme_minimal() +
+  scale_y_continuous(labels = dollar)
+
 ------------------------------------------------------------------------
 
 ## Exercise 3: Data Quality Visualization 
@@ -469,6 +520,29 @@ population vs age MOE percentage
 using `geom_hline()` with a blue dashed line 
 - Use `theme_classic()`instead of `theme_minimal()` 
 - Create a boxplot comparing age MOE across the three population categories
+
+
+county_reliability <- county_data %>%
+  mutate(
+    age_moe_pct = (median_ageM / median_ageE) * 100,
+    age_category = case_when(
+      total_popE < 50000 ~ "Small (<50K)",
+      total_popE < 200000 ~ "Medium (50K-200K)",
+      TRUE ~ "Large (200K+)"
+    )
+  )
+
+ggplot(county_reliability) +
+  aes(x = total_popE, y = age_moe_pct) +
+  geom_point(size = 2, color = "purple") +
+  geom_hline(yintercept = 10, color = "blue", linetype = "dashed") +
+  labs(
+    title = "Median Age MOE vs Population",
+    x = "Total Population",
+    y = "Median Age MOE (%)",
+    caption = "Red line = 5% reliability threshold"
+  ) +
+  theme_minimal() 
 
 ------------------------------------------------------------------------
 
