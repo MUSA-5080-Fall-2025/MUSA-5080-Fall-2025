@@ -52,9 +52,11 @@ If there is a special character like comma, you need use double quote mark so th
 
 ```{r setup}
 # Load required packages (hint: you need tidy census, tidyverse, and knitr)
-
+library(tidycensus)
+library(tidyverse)
+library(knitr)
 # Set your Census API key
-
+census_api_key("e17c1c6ce413dc3faca31a17a58ab3374404bb9e")
 # Choose your state for analysis - assign it to a variable called my_state
 ```
 
@@ -320,8 +322,32 @@ county_summary <- race_tract %>%
 # Calculate MOE percentages for white, Black, and Hispanic variables
 # Hint: use the same formula as before (margin/estimate * 100)
 
+demographic_moe <- race_tract %>%
+  mutate(
+    white_moe_pct    = (whiteM    / whiteE)    * 100,
+    black_moe_pct    = (blackM    / blackE)    * 100,
+    hispanic_moe_pct = (hispanicM / hispanicE) * 100
+  )
+
 # Create a flag for tracts with high MOE on any demographic variable
+
+demographic_moe <- demographic_moe %>%
+  mutate(
+    high_moe_flag = if_else(
+      white_moe_pct > 10 | black_moe_pct > 10 | hispanic_moe_pct > 10,
+      TRUE, FALSE
+    )
+  )
+
 # Use logical operators (| for OR) in an ifelse() statement
+
+summary_tracts <- demographic_moe %>%
+  summarise(
+    total_tracts    = n(),
+    high_moe_tracts = sum(high_moe_flag, na.rm = TRUE),
+    pct_high_moe    = 100 * mean(high_moe_flag, na.rm = TRUE)
+  )
+summary_tracts
 
 # Create summary statistics showing how many tracts have data quality issues
 ```
@@ -334,6 +360,18 @@ county_summary <- race_tract %>%
 # Group tracts by whether they have high MOE issues
 # Calculate average characteristics for each group:
 # - population size, demographic percentages
+
+avg_characteristics <- demographic_moe %>%
+  group_by(high_moe_flag) %>%
+  summarise(
+    avg_pop      = mean(total_popE, na.rm = TRUE),
+    avg_white    = mean(white_pct, na.rm = TRUE),
+    avg_black    = mean(black_pct, na.rm = TRUE),
+    avg_hispanic = mean(hispanic_pct, na.rm = TRUE),
+    n_tracts     = n()
+  )
+
+avg_characteristics
 
 # Use group_by() and summarize() to create this comparison
 # Create a professional table showing the patterns
