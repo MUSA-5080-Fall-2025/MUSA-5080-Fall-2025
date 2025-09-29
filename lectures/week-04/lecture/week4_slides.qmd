@@ -1,0 +1,427 @@
+---
+title: "Spatial Data & GIS Operations in R"
+subtitle: "Week 4: MUSA 5080"
+author: "Dr. Elizabeth Delmelle"
+date: "September 29, 2025"
+format: 
+  revealjs:
+    theme: simple
+    slide-number: true
+    chalkboard: true
+    code-line-numbers: true
+    incremental: false
+    smaller: true
+---
+
+# Today's Agenda
+
+## What We'll Cover
+
+<div class="columns">
+<div class="column" style="width:50%;">
+
+**Spatial Data Fundamentals** 
+
+- Vector data model and sf objects
+- Reading and inspecting spatial data
+- Basic spatial data operations
+
+**Spatial Operations**  
+
+- Spatial subsetting and filtering
+- Spatial joins and relationships
+- Measuring distances and areas
+
+</div><div class="column" style="width:50%;">
+
+**Geometry Operations** 
+
+- Buffers, intersections, and unions
+- Spatial aggregation
+
+**Coordinate Systems** 
+
+- Understanding projections
+- Transforming between coordinate systems
+</div></div>
+---
+
+# Part 1: Why Spatial Analysis Matters
+
+## From Last Week's Census Data...
+
+**You've been working with:**
+
+- County-level demographic data
+- Income, education, population patterns
+- Data quality and reliability analysis
+
+**Missing piece:** **WHERE** are these patterns occurring?
+
+**This week:** Add the spatial dimension to understand:
+
+- Geographic clustering of problems
+- Spatial relationships between communities
+- Access to services and resources
+
+## Real Policy Questions Need Spatial Answers
+
+**"Which communities have the lowest income?"**
+
+→ *Are they clustered? Isolated? Near resources?*
+
+**"Where should we locate a new health clinic?"**
+
+→ *Optimize access for underserved populations*
+
+**"How do school districts compare?"**
+
+→ *Account for geographic boundaries and spillovers*
+
+**"Is there environmental justice concern?"**
+
+→ *Do pollution sources cluster near vulnerable communities?*
+
+## Spatial Analysis and Algorithmic Bias
+
+**Geographic bias in algorithms:**
+
+- Training data may under-represent certain areas
+- Spatial autocorrelation violates independence assumptions
+- Service delivery algorithms may reinforce geographic inequities
+
+**Examples:**
+
+- Rideshare algorithms avoiding certain neighborhoods
+- Crime prediction concentrating enforcement in specific areas
+- Social service algorithms missing rural communities
+
+**Your role:** Understand spatial patterns to design fairer systems
+
+---
+# Part 2: Spatial Data Fundamentals
+
+## Vector Data Model
+
+**Real world → Simplified geometric representations**
+
+**Three basic types:**
+
+- **Points** → Locations (schools, hospitals, crime incidents)
+- **Lines** → Linear features (roads, rivers, transit routes)  
+- **Polygons** → Areas (census tracts, neighborhoods, service areas)
+
+**Each feature has:**
+
+- **Geometry** → Shape and location
+- **Attributes** → Data about that feature (population, income, etc.)
+
+## The sf Package: Simple Features for R
+
+**Why sf?**
+
+- Modern replacement for older spatial packages
+- Integrates with tidyverse workflows
+- Follows international standards
+- Fast and reliable
+
+**Key principle:** Spatial data is just data.frame + geometry column
+
+## Loading Spatial Data
+
+**Common spatial data formats:**
+
+- **Shapefiles** (.shp + supporting files)
+- **GeoJSON** (.geojson)
+- **KML/KMZ** (Google Earth)
+- **Database connections** (PostGIS)
+
+***examples in corresponding code***
+
+---
+
+# Part 3: Spatial Operations
+
+## Spatial Subsetting
+
+**Extract features based on spatial relationships**
+
+***examples in code***
+
+**Key functions:** `st_filter()`, `st_intersects()`, `st_touches()`, `st_within()`
+
+## Understanding the .predicate Parameter
+
+**The `.predicate` tells `st_filter()` what spatial relationship to look for:**
+
+```r predicate-structure
+# Basic structure:
+st_filter(data_to_filter, reference_geometry, .predicate = relationship)
+```
+
+**Different questions need different relationships:**
+
+- **"Which counties border Allegheny?"** → `st_touches`
+- **"Which tracts are IN Allegheny?"** → `st_within`  
+- **"Which tracts overlap a metro area?"** → `st_intersects`
+
+**Default:** If no `.predicate` specified, uses `st_intersects`
+
+## Why .predicate Matters: Visual Example
+
+**For county neighbors, why `st_touches` not `st_intersects`?**
+
+
+***example in code***
+
+st_intersects includes the reference feature itself!
+
+## Spatial Relationships: When to Use Each
+
+| Predicate | Definition | Policy Use Case |
+|-----------|------------|-----------------|
+| `st_intersects()` | Any overlap at all | "Counties affected by flooding" |
+| `st_touches()` | Share boundary, no interior overlap | "Neighboring counties" |
+| `st_within()` | Completely inside | "Schools within district boundaries" |
+| `st_contains()` | Completely contains | "Districts containing hospitals" |
+| `st_overlaps()` | Partial overlap | "Overlapping service areas" |
+| `st_disjoint()` | No spatial relationship | "Counties separate from urban areas" |
+
+**Most common:** `st_intersects()` (any overlap) and `st_touches()` (neighbors)
+
+## Predicate Examples with Code
+
+
+
+## Spatial Joins
+
+**Combine datasets based on spatial relationships**
+
+***examples in codes***
+
+
+## Distance Calculations
+
+***examples in codes***
+
+## Area Calculations
+
+`{r areas}
+# Calculate county areas
+
+***examples in codes***
+
+**Important:** Units depend on coordinate reference system!
+
+# A note about that (.)
+
+The dot (.) is a placeholder that represents the data being passed through the pipe (%>%).
+
+pa_counties <- pa_counties %>%
+  mutate(
+    area_sqkm = as.numeric(st_area(.)) / 1000000
+  )
+  
+The . refers to `pa_counties` - the data frame being passed through the pipe.
+So this is equivalent to:
+
+pa_counties <- pa_counties %>%
+  mutate(
+    area_sqkm = as.numeric(st_area(pa_counties)) / 1000000
+  )
+
+---
+
+
+# Part 4: Geometry Operations
+
+## Buffer Operations
+
+**Create zones around features**
+
+`{r buffers}
+# 10km buffer around all hospitals
+hospital_buffers <- hospitals %>%
+  st_buffer(dist = 10000)  # 10,000 meters
+
+# Different buffer sizes by hospital type
+hospital_buffers <- hospitals %>%
+  mutate(
+    buffer_size = case_when(
+      type == "Major Medical Center" ~ 15000,
+      type == "Community Hospital" ~ 10000,
+      type == "Clinic" ~ 5000
+    )
+  ) %>%
+  st_buffer(dist = .$buffer_size)
+`
+
+**Policy application:** Service accessibility zones, environmental impact areas
+
+## Intersection Operations
+
+**Find overlapping areas**
+
+The Key Difference `st_filter()` with predicates: 
+Selects complete features (keeps or removes entire rows)
+
+`st_intersection()` and `st_union()`: Modifies geometries (creates new shapes)
+
+## When to Use Each
+Use `st_filter()` when:
+
+- "Which census tracts touch hospital service areas?"
+- You want to select/identify features based on location
+- You need complete features with their original boundaries
+- You're counting: "How many tracts are near hospitals?"
+
+Use `st_intersection()` when:
+
+- "What is the area of overlap between tracts and service zones?"
+- You need to calculate areas, populations, or other measures within specific boundaries
+- You're doing spatial overlay analysis
+- You need to clip data to a study area
+
+## Union Operations
+
+**Combine multiple features into one**
+
+
+
+## Spatial Aggregation
+
+**Summarize data across spatial boundaries**
+
+
+---
+
+# Part 5: Coordinate Reference Systems
+
+## Why Projections Matter
+
+**The Earth is round, maps are flat**
+
+**Problems:**
+
+- Can't preserve area, distance, and angles simultaneously
+- Different projections optimize different properties
+- Wrong projection → wrong analysis results!
+
+**Example:** Measuring areas in latitude/longitude gives wrong answers
+
+## Geographic vs. Projected Coordinates
+
+**Geographic Coordinate Systems (GCS):**
+
+- Latitude/longitude coordinates
+- Units: decimal degrees
+- Good for: Global datasets, web mapping
+- Bad for: Area/distance calculations
+
+**Projected Coordinate Systems (PCS):**
+
+- X/Y coordinates on a flat plane
+- Units: meters, feet, etc.
+- Good for: Local analysis, accurate measurements
+- Bad for: Large areas, global datasets
+
+## Common Coordinate Reference Systems
+
+**WGS84 (EPSG:4326)** 
+
+- GPS standard, global coverage
+- Geographic system (lat/lon)
+- Good for web mapping, data sharing
+
+**Web Mercator (EPSG:3857)** 
+
+- Web mapping standard
+- Projected system
+- Heavily distorts areas near poles
+
+**State Plane / UTM zones** 
+
+- Local accuracy
+- Different zones for different regions
+- Optimized for specific geographic areas
+
+**Albers Equal Area**
+
+- Preserves area
+- Good for demographic/statistical analysis
+
+## Checking and Setting CRS
+
+
+*To simply check current CRS*
+`st_crs(pa_counties)`
+
+*To set CRS (ONLY if missing)*
+`pa_counties <- st_set_crs(pa_counties, 4326)`
+
+*Transform to different CRS*
+
+***Pennsylvania South State Plane (good for PA analysis)***
+
+`pa_counties_projected <- pa_counties %>%
+  st_transform(crs = 3365)`
+
+*Transform to Albers Equal Area (good for area calculations)*
+`pa_counties_albers <- pa_counties %>%
+  st_transform(crs = 5070)`
+`
+
+## When to Transform
+
+**Transform when:**
+
+- Calculating areas or distances
+- Creating buffers
+- Doing geometric operations
+- Working with local/regional data
+
+## Live Demo: Projection Effects
+
+
+---
+
+# Part 6: Putting It All Together
+
+## Policy Analysis Workflow
+
+**Typical spatial analysis steps:**
+
+1. **Load data** → Get spatial boundaries and attribute data
+2. **Check projections** → Transform to appropriate CRS
+3. **Join datasets** → Combine spatial and non-spatial data
+4. **Spatial operations** → Buffers, intersections, distance calculations
+5. **Aggregation** → Summarize across spatial units
+6. **Visualization** → Maps and charts
+7. **Interpretation** → Policy recommendations
+
+## Example: Healthcare Access Analysis
+
+**Research question:** Which communities have poor access to healthcare?
+
+*Step 1: Load data*
+
+*Step 2: Transform to local projection*
+
+counties <- st_transform(counties, 3365)
+hospitals <- st_transform(hospitals, 3365)
+
+*Step 3: Calculate access*
+
+hospital_buffers <- hospitals %>%
+  st_buffer(dist = 25000)  # 25km access zone
+
+county_access <- counties %>%
+  mutate(
+    has_hospital = st_intersects(., st_union(hospital_buffers), sparse = FALSE),
+    distance_to_nearest = as.numeric(st_distance(st_centroid(.), hospitals))
+  )
+
+*Step 4: Join with demographic data and analyze*
+
+---
+

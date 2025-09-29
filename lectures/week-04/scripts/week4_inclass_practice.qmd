@@ -1,0 +1,426 @@
+---
+title: "Week 4 In-Class Practice Exercises"
+subtitle: "Spatial Operations with Pennsylvania Data"
+author: "Your Name Here"
+date: today
+format: 
+  html:
+    code-fold: false
+    toc: true
+    toc-location: left
+    theme: cosmo
+execute:
+  warning: false
+  message: false
+---
+
+## Setup
+
+```{r setup}
+library(sf)
+library(tidyverse)
+library(tigris)
+library(tidycensus)
+library(scales)
+library(patchwork)
+library(here)
+# Set Census API key
+census_api_key("42bf8a20a3df1def380f330cf7edad0dd5842ce6")
+
+# Load the data (same as lecture)
+pa_counties <- st_read(here("data/Pennsylvania_County_Boundaries.shp"))
+districts <- st_read(here("data/districts.geojson"))
+hospitals <- st_read(here("data/hospitals.geojson"))
+census_tracts <- tracts(state = "PA", cb = TRUE)
+metro_areas <- core_based_statistical_areas(cb = TRUE)
+
+# Standardize CRS
+hospitals <- st_transform(hospitals, st_crs(pa_counties))
+census_tracts <- st_transform(census_tracts, st_crs(pa_counties))
+metro_areas <- st_transform(metro_areas, st_crs(pa_counties))
+districts <- st_transform(districts, st_crs(census_tracts))
+```
+
+---
+
+## Exercise 1: Find Your County's Neighbors (10 minutes)
+
+**Goal:** Practice spatial filtering with different predicates
+
+### 1.1 Pick a Pennsylvania County
+
+**Your Task:** Choose any PA county and find all counties that border it.
+
+```{r}
+# Step 1: Look at available county names
+unique(pa_counties$COUNTY_NAM)
+
+# Step 2: Pick one county (change this to your choice!)
+my_county <- pa_counties %>%
+  filter(COUNTY_NAM == "CENTRE")  # Change "CENTRE" to your county
+
+# Step 3: Find neighbors using st_touches
+my_neighbors <- pa_counties %>%
+  st_filter(my_county, .predicate = st_touches)
+
+# Step 4: How many neighbors does your county have?
+cat("Number of neighboring counties:", nrow(my_neighbors), "\n")
+print("Neighbor names:")
+print(my_neighbors$COUNTY_NAM)
+```
+
+### 1.2 Map Your Results
+
+**Your Task:** Create a map showing your county and its neighbors in different colors.
+
+```{r}
+# Create the map
+ggplot() +
+  geom_sf(data = pa_counties, fill = "lightgray", color = "white") +
+  geom_sf(data = my_neighbors, fill = "lightblue", alpha = 0.7) +
+  geom_sf(data = my_county, fill = "darkblue") +
+  labs(
+    title = paste("Neighbors of", my_county$COUNTY_NAM[1], "County"),
+    subtitle = paste(nrow(my_neighbors), "neighboring counties")
+  ) +
+  theme_void()
+```
+
+### 1.3 Challenge: Compare with st_intersects
+
+**Your Task:** What happens if you use `st_intersects` instead of `st_touches`? Why is the count different?
+
+```{r}
+# Use st_intersects
+intersecting_counties <- pa_counties %>%
+  st_filter(my_county, .predicate = st_intersects)
+
+cat("With st_touches:", nrow(my_neighbors), "counties\n")
+cat("With st_intersects:", nrow(intersecting_counties), "counties\n")
+cat("Difference:", nrow(intersecting_counties) - nrow(my_neighbors), "\n")
+```
+
+**Question:** Why is there a difference of 1? What does this tell you about the difference between `st_touches` and `st_intersects`?
+
+---
+
+## Exercise 2: Hospital Service Areas (15 minutes)
+
+**Goal:** Practice buffering and measuring accessibility
+
+### 2.1 Create Hospital Service Areas
+
+**Your Task:** Create 15-mile (24140 meter) service areas around all hospitals in your county.
+
+```{r}
+# Step 1: Filter hospitals in your county
+# First do a spatial join to assign counties to hospitals
+hospitals_with_county <- hospitals %>%
+  st_join(pa_counties %>% select(COUNTY_NAM))
+
+# Filter for your county's hospitals
+my_county_hospitals <- hospitals_with_county %>%
+  filter(COUNTY_NAM == "CENTRE")  # Change to match your county
+
+cat("Number of hospitals in county:", nrow(my_county_hospitals), "\n")
+
+# Step 2: Project to accurate CRS for buffering
+my_county_hospitals_proj <- my_county_hospitals %>%
+  st_transform(3365)  # Pennsylvania State Plane South
+
+# Step 3: Create 15-mile buffers (24140 meters = 15 miles)
+hospital_service_areas <- my_county_hospitals_proj %>%
+  st_buffer(dist = 79200)  # 15 miles in feet for PA State Plane
+
+# Step 4: Transform back for mapping
+hospital_service_areas <- st_transform(hospital_service_areas, st_crs(pa_counties))
+```
+
+### 2.2 Map Service Coverage
+
+**Your Task:** Create a map showing hospitals and their service areas.
+
+```{r}
+ggplot() +
+  geom_sf(data = my_county, fill = "white", color = "gray") +
+  geom_sf(data = hospital_service_areas, fill = "lightblue", alpha = 0.4) +
+  geom_sf(data = my_county_hospitals, color = "red", size = 2) +
+  labs(
+    title = paste("Hospital Service Areas in", my_county$COUNTY_NAM[1], "County"),
+    subtitle = "Red points = Hospitals, Blue areas = 15-mile service zones"
+  ) +
+  theme_void()
+```
+
+### 2.3 Calculate Coverage
+
+**Your Task:** What percentage of your county is within 15 miles of a hospital?
+
+```{r}
+# Union all service areas into one polygon
+combined_service_area <- hospital_service_areas %>%
+  st_union()
+
+# Calculate areas (need to be in projected CRS)
+my_county_proj <- st_transform(my_county, 3365)
+combined_service_proj <- st_transform(combined_service_area, 3365)
+
+# Find intersection
+coverage_area <- st_intersection(my_county_proj, combined_service_proj)
+
+# Calculate percentages
+county_area <- as.numeric(st_area(my_county_proj))
+covered_area <- as.numeric(st_area(coverage_area))
+coverage_pct <- (covered_area / county_area) * 100
+
+cat("County area:", round(county_area / 1e6, 1), "sq km\n")
+cat("Covered area:", round(covered_area / 1e6, 1), "sq km\n")
+cat("Coverage:", round(coverage_pct, 1), "%\n")
+```
+
+**Question:** Is your county well-served by hospitals? What areas might be underserved?
+
+---
+
+## Exercise 3: Congressional District Analysis (15 minutes)
+
+**Goal:** Practice spatial joins and aggregation
+
+### 4.1 Join Districts to Counties
+
+**Your Task:** Figure out which congressional districts overlap with each county.
+
+```{r}
+# Spatial join: districts to counties
+districts_by_county <- districts %>%
+  st_join(pa_counties %>% select(COUNTY_NAM)) %>%
+  st_drop_geometry() %>%
+  group_by(COUNTY_NAM) %>%
+  summarize(
+    n_districts = n_distinct(OBJECTID),
+    district_ids = paste(unique(MSLINK), collapse = ", ")
+  ) %>%
+  arrange(desc(n_districts))
+
+# Which counties have the most districts?
+head(districts_by_county, 10)
+```
+
+
+### 4.2 Calculate District Statistics
+
+**Your Task:** Get demographic data for census tracts and aggregate to districts.
+
+```{r}
+# Get tract-level demographics
+tract_demographics <- get_acs(
+  geography = "tract",
+  variables = c(
+    total_pop = "B01003_001",
+    median_income = "B19013_001",
+    white_pop = "B03002_003",
+    black_pop = "B03002_004",
+    hispanic_pop = "B03002_012"
+  ),
+  state = "PA",
+  year = 2022,
+  output = "wide"
+)
+
+# Join to tract boundaries
+tracts_with_data <- census_tracts %>%
+  left_join(tract_demographics, by = "GEOID")
+
+# Spatial join to districts and aggregate
+district_demographics <- tracts_with_data %>%
+  st_join(districts) %>%
+  st_drop_geometry() %>%
+  group_by(OBJECTID, MSLINK) %>%
+  summarize(
+    total_population = sum(total_popE, na.rm = TRUE),
+    median_income = weighted.mean(median_incomeE, total_popE, na.rm = TRUE),
+    pct_white = sum(white_popE, na.rm = TRUE) / sum(total_popE, na.rm = TRUE) * 100,
+    pct_black = sum(black_popE, na.rm = TRUE) / sum(total_popE, na.rm = TRUE) * 100,
+    pct_hispanic = sum(hispanic_popE, na.rm = TRUE) / sum(total_popE, na.rm = TRUE) * 100,
+    n_tracts = n()
+  ) %>%
+  arrange(desc(total_population))
+
+# Show results
+head(district_demographics, 10)
+```
+
+### 4.3 Map District Demographics
+
+**Your Task:** Create a choropleth map of median income by congressional district.
+
+```{r}
+# Join demographics back to district boundaries
+districts_with_demographics <- districts %>%
+  left_join(district_demographics, by = "OBJECTID")
+
+# Create the map
+ggplot(districts_with_demographics) +
+  geom_sf(aes(fill = median_income), color = "white", size = 0.5) +
+  scale_fill_viridis_c(
+    name = "Median\nIncome",
+    labels = dollar,
+    option = "plasma"
+  ) +
+  labs(
+    title = "Median Household Income by Congressional District",
+    subtitle = "Pennsylvania",
+    caption = "Source: ACS 2018-2022"
+  ) +
+  theme_void()
+```
+
+### 4.4 Challenge: Find Diverse Districts
+
+**Your Task:** Which districts are the most racially diverse?
+
+```{r}
+# Calculate diversity index (simple version: higher = more diverse)
+# A perfectly even distribution would be ~33% each for 3 groups
+district_demographics <- district_demographics %>%
+  mutate(
+    diversity_score = 100 - abs(pct_white - 33.3) - abs(pct_black - 33.3) - abs(pct_hispanic - 33.3)
+  ) %>%
+  arrange(desc(diversity_score))
+
+# Most diverse districts
+head(district_demographics %>% select(MSLINK, pct_white, pct_black, pct_hispanic, diversity_score), 5)
+
+# Least diverse districts
+tail(district_demographics %>% select(MSLINK, pct_white, pct_black, pct_hispanic, diversity_score), 5)
+```
+
+---
+
+## Exercise 5: Projection Effects (10 minutes)
+
+**Goal:** Understand how CRS affects calculations
+
+### 5.1 Calculate Areas in Different Projections
+
+**Your Task:** Calculate county areas using different coordinate systems and compare.
+
+```{r}
+# Calculate areas in different CRS
+area_comparison <- pa_counties %>%
+  # Geographic (WGS84) - WRONG for areas!
+  st_transform(4326) %>%
+  mutate(area_geographic = as.numeric(st_area(.))) %>%
+  # PA State Plane South - Good for PA
+  st_transform(3365) %>%
+  mutate(area_state_plane = as.numeric(st_area(.))) %>%
+  # Albers Equal Area - Good for areas
+  st_transform(5070) %>%
+  mutate(area_albers = as.numeric(st_area(.))) %>%
+  st_drop_geometry() %>%
+  select(COUNTY_NAM, starts_with("area_")) %>%
+  mutate(
+    # Calculate errors compared to Albers (most accurate for area)
+    error_geographic_pct = abs(area_geographic - area_albers) / area_albers * 100,
+    error_state_plane_pct = abs(area_state_plane - area_albers) / area_state_plane * 100
+  )
+
+# Show counties with biggest errors
+area_comparison %>%
+  arrange(desc(error_geographic_pct)) %>%
+  select(COUNTY_NAM, error_geographic_pct, error_state_plane_pct) %>%
+  head(10)
+```
+
+### 5.2 Visualize the Error
+
+**Your Task:** Map which counties have the biggest area calculation errors.
+
+```{r}
+# Join error data back to counties
+counties_with_errors <- pa_counties %>%
+  left_join(
+    area_comparison %>% select(COUNTY_NAM, error_geographic_pct),
+    by = "COUNTY_NAM"
+  )
+
+# Map the error
+ggplot(counties_with_errors) +
+  geom_sf(aes(fill = error_geographic_pct), color = "white") +
+  scale_fill_viridis_c(
+    name = "Area\nError %",
+    option = "magma"
+  ) +
+  labs(
+    title = "Area Calculation Errors by County",
+    subtitle = "Using geographic coordinates (WGS84) instead of projected CRS"
+  ) +
+  theme_void()
+```
+
+**Question:** Which counties have the largest errors? Why might this be?
+
+---
+
+## Bonus Challenge: Combined Analysis (If Time Permits)
+
+**Goal:** Combine multiple operations for a complex policy question
+
+### Research Question
+
+**Which Pennsylvania counties have the highest proportion of vulnerable populations (elderly + low-income) living far from hospitals?**
+
+**Your Task:** Combine what you've learned to identify vulnerable, underserved communities.
+
+**Steps:**
+1. Get demographic (elderly and income) data for census tracts
+2. Identify vulnerable tracts (low income AND high elderly population)
+3. Calculate distance to nearest hospital
+4. Check which ones are more than 15 miles from a hospital
+5. Aggregate to county level
+6. Create comprehensive map
+7. Create a summary table
+
+```{r}
+# Your code here!
+
+
+
+
+
+
+
+```
+
+
+---
+
+## Reflection Questions
+
+After completing these exercises, reflect on:
+
+1. **When did you need to transform CRS?** Why was this necessary?
+
+2. **What's the difference between `st_filter()` and `st_intersection()`?** When would you use each?
+
+3. **How does the choice of predicate (st_touches, st_intersects, st_within) change your results?**
+
+
+---
+
+## Summary of Key Functions Used
+
+| Function | Purpose | Example Use |
+|----------|---------|-------------|
+| `st_filter()` | Select features by spatial relationship | Find neighboring counties |
+| `st_buffer()` | Create zones around features | Hospital service areas |
+| `st_intersects()` | Test spatial overlap | Check access to services |
+| `st_disjoint()` | Test spatial separation | Find rural areas |
+| `st_join()` | Join by location | Add county info to tracts |
+| `st_union()` | Combine geometries | Merge overlapping buffers |
+| `st_intersection()` | Clip geometries | Calculate overlap areas |
+| `st_transform()` | Change CRS | Accurate distance/area calculations |
+| `st_area()` | Calculate areas | County sizes, coverage |
+| `st_distance()` | Calculate distances | Distance to facilities |
+
+**Important Reminder:** Always *check* and standardize CRS when working with spatial data from multiple sources!
