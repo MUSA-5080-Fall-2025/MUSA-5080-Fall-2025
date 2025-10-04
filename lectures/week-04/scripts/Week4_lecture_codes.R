@@ -5,7 +5,7 @@ library(tidyverse)
 library(ggplot2)
 library(tigris)
 library(tidycensus)
-census_api_key("Your Code Here")
+census_api_key("e17c1c6ce413dc3faca31a17a58ab3374404bb9e")
 # Read a shapefile
 pa_counties <- st_read("data/Pennsylvania_County_Boundaries.shp")
 
@@ -204,8 +204,10 @@ pa_tracts_data <- get_acs(
 )
 
 # Join demographic data to tract boundaries
+library(dplyr)
 tracts <- tracts %>%
-  left_join(pa_tracts_data, by = "GEOID")
+  dplyr::left_join(pa_tracts_data, by = "GEOID")
+
 
 # Identify vulnerable populations (low-income tracts)
 low_income_tracts <- tracts %>%
