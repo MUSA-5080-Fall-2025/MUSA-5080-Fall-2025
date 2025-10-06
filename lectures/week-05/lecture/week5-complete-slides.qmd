@@ -1,0 +1,1003 @@
+---
+title: "Introduction to Linear Regression"
+subtitle: "Week 5: MUSA 5080"
+author: "Dr. Elizabeth Delmelle"
+date: "October 6, 2025"
+format: 
+  revealjs:
+    theme: simple
+    slide-number: true
+    chalkboard: true
+    code-line-numbers: true
+    incremental: false
+    smaller: true
+---
+
+```{r}
+#| include: false
+options(scipen = 999)
+library(tidyverse)
+library(tidycensus)
+library(broom)
+library(scales)
+
+census_api_key("Your Key Here")
+```
+
+# Opening Question
+
+**Scenario:** You're advising a state agency on resource allocation.
+
+Some counties have sparse data. Can you **predict** their median income using data from counties with better measurements?
+
+**Broader question:** How do we make informed predictions when we don't have complete information?
+
+---
+
+# Today's Roadmap
+
+1. **The Statistical Learning Framework:** What are we actually doing?
+2. **Two goals:** Understanding relationships vs Making predictions
+3. **Building your first model** with PA census data
+4. **Model evaluation:** How do we know if it's any good?
+5. **Checking assumptions:** When can we trust the model?
+6. **Improving predictions:** Transformations, multiple variables
+
+---
+
+# Part 1: The Statistical Learning Framework
+
+## The General Problem
+
+We observe data: counties, income, population, education, etc.
+
+We believe there's some **relationship** between these variables.
+
+**Statistical learning** = a set of approaches for estimating that relationship
+
+```{r}
+#| echo: false
+#| eval: false
+library(tidyverse)
+
+# Generate data following Y = f(X) + ε
+set.seed(789)
+n <- 50
+x <- seq(0, 10, length.out = n)
+
+# True function f(X) - let's make it slightly curved
+f_x <- 5 + 2*x - 0.1*x^2
+
+# Add random error ε
+epsilon <- rnorm(n, 0, 2)
+y <- f_x + epsilon
+
+# Create data frame
+data <- data.frame(x = x, y = y, f_x = f_x, epsilon = epsilon)
+
+# Highlight a few specific points to show the decomposition
+highlight_points <- c(10, 25, 40)
+data$highlight <- 1:n %in% highlight_points
+
+# Create the visualization
+ggplot(data, aes(x = x)) +
+  geom_line(aes(y = f_x), color = "#2C3E50", linewidth = 1.5) +
+  geom_point(aes(y = y, size = highlight, alpha = highlight), 
+             color = "#E74C3C", show.legend = FALSE) +
+  geom_segment(data = data[data$highlight, ],
+               aes(x = x, xend = x, y = f_x, yend = y),
+               color = "#9B59B6", linewidth = 1, 
+               arrow = arrow(length = unit(0.2, "cm"), ends = "both")) +
+  annotate("text", x = 2, y = 22, label = "Y = f(X) + ε", 
+           size = 6, fontface = "bold", hjust = 0) +
+  annotate("text", x = 8, y = 18, label = "f(X)\n(systematic)", 
+           size = 5, color = "#2C3E50", hjust = 0) +
+  annotate("text", x = 5.5, y = 10, label = "ε\n(random error)", 
+           size = 4, color = "#9B59B6") +
+  annotate("point", x = 1, y = 8, size = 4, color = "#E74C3C") +
+  annotate("text", x = 1.5, y = 8, label = "Observed Y", 
+           size = 4, color = "#E74C3C", hjust = 0) +
+  scale_size_manual(values = c(2, 4)) +
+  scale_alpha_manual(values = c(0.6, 1)) +
+  labs(x = "X (predictors)", y = "Y (outcome)",
+       title = "The Statistical Learning Framework",
+       subtitle = "Our goal: Estimate f(X) from observed data") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", size = 16),
+        panel.grid.minor = element_blank())
+
+ggsave("images/statistical_learning_framework.png", 
+       width = 10, height = 6, dpi = 300)
+```
+
+![](images/statistical_learning_framework.png){width="80%"}
+
+---
+
+## Formalizing the Relationship
+
+For any quantitative response Y and predictors X₁, X₂, ... Xₚ:
+
+$$Y = f(X) + \epsilon$$
+
+Where:
+
+- **f** = the systematic information X provides about Y
+- **ε** = random error (irreducible)
+
+---
+
+## What is f?
+
+**f represents the true relationship** between predictors and outcome
+
+- It's **fixed** but **unknown**
+- It's what we're trying to estimate
+- Different X values produce different Y values through f
+
+**Example:**
+
+- Y = median income
+- X = population, education, poverty rate
+- f = the way these factors systematically relate to income
+
+---
+
+## Why Estimate f?
+
+Two main reasons:
+
+**1. Prediction**
+
+- Estimate Y for new observations
+- Don't necessarily care about the exact form of f
+- Focus: accuracy of predictions
+
+**2. Inference**
+
+- Understand how X affects Y
+- Which predictors matter?
+- What's the nature of the relationship?
+- Focus: interpreting the model
+
+---
+
+## How Do We Estimate f?
+
+**Two broad approaches:**
+
+**Parametric Methods**
+
+- Make an assumption about the functional form (e.g., linear)
+- Reduces problem to estimating a few parameters
+- Easier to interpret
+- **This is what we'll focus on**
+
+**Non-Parametric Methods**
+
+- Don't assume a specific form
+- More flexible
+- Require more data
+- Harder to interpret
+
+---
+
+## Parametric vs. Non-Parametric
+
+![](images/parametric_vs_nonparametric.png)
+
+**Key difference:**
+
+- **Parametric (blue):** We assume f is linear, then estimate β₀ and β₁
+- **Non-parametric (green):** We let the data determine the shape of f
+
+::: {.callout-note}
+## What about deep learning?
+
+Neural networks are technically parametric (millions of parameters!), but achieve flexibility through parameter quantity rather than assuming a rigid form. We won't cover them in this course, but they follow the same Y = f(X) + ε framework.
+:::
+
+---
+
+## Parametric Approach: Linear Regression
+
+**The assumption:** Relationship between X and Y is linear
+
+$$Y \approx \beta_0 + \beta_1X_1 + \beta_2X_2 + ... + \beta_pX_p$$
+
+**The task:** Estimate the β coefficients using our sample data
+
+**The method:** Ordinary Least Squares (OLS)
+
+---
+
+## Why Linear Regression?
+
+**Advantages:**
+
+- Simple and interpretable
+- Well-understood properties
+- Works remarkably well for many problems
+- Foundation for more complex methods
+
+**Limitations:**
+
+- Assumes linearity (we'll test this)
+- Sensitive to outliers
+- Makes several assumptions (we'll check these)
+
+---
+
+# Part 2: Two Different Goals
+
+## Prediction vs Inference
+
+The **same model** serves different purposes:
+
+::: {.columns}
+::: {.column width="50%"}
+**Inference**
+
+- "Does education affect income?"
+- Focus on coefficients
+- Statistical significance matters
+- Understand mechanisms
+:::
+
+::: {.column width="50%"}
+**Prediction**
+
+- "What's County Y's income?"
+- Focus on accuracy
+- Prediction intervals matter
+- Don't need to understand why
+:::
+:::
+
+**Today:** We'll do both, but emphasize prediction
+
+---
+
+## Example: Prediction
+
+**Government use case:**
+
+Census misses people in hard-to-count areas. Can we predict:
+
+- Income for areas with poor survey response?
+- Population for planning purposes?
+- Resource needs based on demographics?
+
+**The model doesn't explain WHY** these relationships exist, but if predictions are accurate, they're useful for policy
+
+---
+
+## Example: Inference
+
+**Research use case:**
+
+Understanding gentrification:
+
+- Which neighborhood characteristics explain income change?
+- How much does education matter vs. proximity to downtown?
+- Are policy interventions associated with outcomes?
+
+**Here we care about the coefficients** and what they tell us about mechanisms
+
+---
+
+## Connection to Week 2: Algorithmic Bias
+
+Remember the healthcare algorithm that discriminated?
+
+**The model:** Predicted healthcare needs using costs as proxy
+
+**Technically:** Probably had good R², low prediction error (good "fit")
+
+**Ethically:** Learned and amplified existing discrimination
+
+::: {.callout-important}
+## Critical Point
+
+A model can be statistically "good" while being ethically terrible for decision-making.
+:::
+
+---
+
+# Part 3: Building Your First Model
+
+## Start with Data and Visualization
+
+Let's apply these concepts to PA counties:
+
+```{r}
+#| echo: false
+#| eval: true
+
+# Fetch PA county data directly from Census API
+pa_data <- get_acs(
+  geography = "county",
+  state = "PA",
+  variables = c(
+    total_pop = "B01003_001",
+    median_income = "B19013_001"
+  ),
+  year = 2022,
+  output = "wide"
+)
+
+# Visualize the relationship
+ggplot(pa_data, aes(x = total_popE, y = median_incomeE)) +
+  geom_point(alpha = 0.6, size = 3) +
+  geom_smooth(method = "lm", se = TRUE, color = "steelblue") +
+  labs(
+    title = "Population vs Median Income in PA Counties",
+    x = "Total Population", 
+    y = "Median Household Income"
+  ) +
+  scale_x_continuous(labels = comma) +
+  scale_y_continuous(labels = dollar) +
+  theme_minimal()
+```
+
+---
+
+## What Do We See?
+
+**Before fitting any model, discuss the visualization:**
+
+- Generally positive relationship
+- Considerable scatter (not deterministic)
+- Most counties are small (clustered left)
+- One large county with surprisingly low income
+- Wider confidence band at higher populations
+
+**Question:** What does this tell us about f(X)?
+
+---
+
+## Fit the Model
+
+```{r}
+#| echo: true
+#| eval: true
+model1 <- lm(median_incomeE ~ total_popE, data = pa_data)
+summary(model1)
+```
+
+---
+
+## Interpreting Coefficients
+
+**Intercept (β₀) = $62,855**
+
+- Expected income when population = 0
+- Not usually meaningful in practice
+
+**Slope (β₁) = $0.02**
+
+- For each additional person, income increases by $0.02
+- **More useful:** For every 1,000 people, income increases by ~$20
+
+**Is this relationship real?**
+
+- p-value < 0.001 → Very unlikely to see this if true β₁ = 0
+- We can reject the null hypothesis
+
+---
+
+## The "Holy Grail" Concept
+
+::: {.columns}
+::: {.column width="45%"}
+Our estimates are just that: **estimates** of the true (unknown) parameters
+
+**Key insight:**
+
+- Red line = true relationship (unknowable)
+- Blue line = our estimate from this sample
+- Different samples → slightly different blue lines
+- Standard errors quantify this uncertainty
+:::
+
+::: {.column width="55%"}
+![](images/population_vs_sample_regression.png)
+:::
+:::
+
+---
+
+## Statistical Significance
+
+**The logic:**
+
+1. **Null hypothesis (H₀):** β₁ = 0 (no relationship)
+2. **Our estimate:** β₁ = 0.02
+3. **Question:** Could we get 0.02 just by chance if H₀ is true?
+
+**t-statistic:** How many standard errors away from 0?
+
+- Bigger |t| = more confidence the relationship is real
+
+**p-value:** Probability of seeing our estimate if H₀ is true
+
+- Small p → reject H₀, conclude relationship exists
+
+---
+
+# Part 4: Model Evaluation
+
+## How Good is This Model?
+
+**Two key questions:**
+
+1. **How well does it fit the data we used?** (in-sample fit)
+2. **How well would it predict new data?** (out-of-sample performance)
+
+**These are NOT the same thing!**
+
+---
+
+## In-Sample Fit: R²
+
+**R² = 0.208**
+
+"21% of variation in income is explained by population"
+
+**Is this good?**
+
+- Depends on your goal!
+- For prediction: Moderate
+- For inference: Shows population matters, but other factors exist
+
+**R² alone doesn't tell us if the model is trustworthy**
+
+---
+
+## The Problem: Overfitting
+
+**Three scenarios:**
+
+1. **Underfitting:** Model too simple (high bias)
+2. **Good fit:** Captures pattern without noise
+3. **Overfitting:** Memorizes training data (high variance)
+
+---
+
+## Overfitting in Regression
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-width: 10
+#| fig-height: 4
+
+# Create example data with clear pattern
+set.seed(123)
+x <- seq(0, 10, 0.5)
+y <- 2 + 0.5*x + rnorm(length(x), 0, 1)
+example_data <- data.frame(x = x, y = y)
+
+# Three models
+p1 <- ggplot(example_data, aes(x, y)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ 1, se = FALSE) +
+  labs(title = "Underfitting", subtitle = "Ignores relationship") +
+  theme_minimal()
+
+p2 <- ggplot(example_data, aes(x, y)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Good Fit", subtitle = "Captures true pattern") +
+  theme_minimal()
+
+p3 <- ggplot(example_data, aes(x, y)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 10), se = FALSE) +
+  labs(title = "Overfitting", subtitle = "Follows noise") +
+  theme_minimal()
+
+library(patchwork)
+p1 | p2 | p3
+```
+
+**The danger:** High R² doesn't mean good predictions!
+
+---
+
+## Train/Test Split
+
+**Solution:** Hold out some data to test predictions
+
+```{r}
+#| echo: true
+#| eval: true
+set.seed(123)
+n <- nrow(pa_data)
+
+# 70% training, 30% testing
+train_indices <- sample(1:n, size = 0.7 * n)
+train_data <- pa_data[train_indices, ]
+test_data <- pa_data[-train_indices, ]
+
+# Fit on training data only
+model_train <- lm(median_incomeE ~ total_popE, data = train_data)
+
+# Predict on test data
+test_predictions <- predict(model_train, newdata = test_data)
+```
+
+---
+
+## Evaluate Predictions
+
+```{r}
+#| echo: true
+#| eval: true
+# Calculate prediction error (RMSE)
+rmse_test <- sqrt(mean((test_data$median_incomeE - test_predictions)^2))
+rmse_train <- summary(model_train)$sigma
+
+cat("Training RMSE:", round(rmse_train, 0), "\n")
+cat("Test RMSE:", round(rmse_test, 0), "\n")
+```
+
+::: {.callout-note}
+## Interpreting RMSE
+
+On new data (test set), our predictions are off by ~$9,500 on average. Is this level of error acceptable for policy decisions?
+:::
+
+---
+
+## Cross-Validation
+
+**Better approach:** Multiple train/test splits
+
+![](images/cv-illustration.svg){width="80%"}
+
+**Gives more stable estimate of true prediction performance**
+
+---
+
+## Cross-Validation in Action {.smaller}
+
+```{r}
+#| echo: true
+#| eval: true
+library(caret)
+
+# 10-fold cross-validation
+train_control <- trainControl(method = "cv", number = 10)
+
+cv_model <- train(median_incomeE ~ total_popE,
+                  data = pa_data,
+                  method = "lm",
+                  trControl = train_control)
+
+cv_model$results
+```
+
+**Key Metrics (Averaged Across 10 Folds)**
+
+- **RMSE:** Typical prediction error (~$12,578)
+- **R²:** % of variation explained (0.564)
+- **MAE:** Average absolute error (~$8,860) - easier to interpret
+
+---
+
+# Part 5: Checking Assumptions
+
+## When Can We Trust This Model?
+
+Linear regression makes assumptions. If violated:
+
+- Coefficients may be biased
+- Standard errors wrong
+- Predictions unreliable
+
+**We must check diagnostics** before trusting any model
+
+---
+
+## Assumption 1: Linearity
+
+**What we assume:** Relationship is actually linear
+
+**How to check:** Residual plot
+
+```{r}
+#| echo: true
+#| eval: true
+pa_data$residuals <- residuals(model1)
+pa_data$fitted <- fitted(model1)
+
+ggplot(pa_data, aes(x = fitted, y = residuals)) +
+  geom_point() +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "Residual Plot", x = "Fitted Values", y = "Residuals") +
+  theme_minimal()
+```
+
+---
+
+## Reading Residual Plots
+
+::: {.columns}
+::: {.column width="50%"}
+**Good**
+
+- Random scatter
+- Points around 0
+- Constant spread
+:::
+
+::: {.column width="50%"}
+**Bad**
+
+- Curved pattern
+- Model missing something
+- Predictions biased
+:::
+:::
+
+::: {.callout-important}
+## Why This Matters for Prediction
+
+**Linearity violations hurt predictions, not just inference:**
+
+- If the true relationship is curved and you fit a straight line, you'll systematically underpredict in some regions and overpredict in others
+- **Biased predictions** in predictable ways (not random errors!)
+- Residual plots should show **random scatter** - any pattern means your model is missing something systematic
+:::
+
+---
+
+## Assumption 2: Constant Variance
+
+**Heteroscedasticity:** Variance changes across X
+
+**Impact:** Standard errors are wrong → p-values misleading
+
+::: {.callout-warning}
+## What Heteroskedasticity Tells You
+
+**Often a symptom of model misspecification:**
+
+- Model fits well for some values (e.g., small counties) but poorly for others (large counties)
+- May indicate **missing variables** that matter more at certain X values
+- Ask: "What's different about observations with large residuals?"
+
+**Example:** Population alone predicts income well in rural counties, but large urban counties need additional variables (education, industry) to predict accurately.
+:::
+
+---
+
+## Heteroskedasticity Visualized
+
+![](images/heteroskedasticity-visual.svg){width="90%"}
+
+**Key Insight:** Adding the right predictor can fix heteroscedasticity
+
+---
+
+## Formal Test: Breusch-Pagan
+
+```{r}
+#| echo: true
+#| eval: true
+library(lmtest)
+bptest(model1)
+```
+
+**Interpretation:**
+
+- **p > 0.05:** Constant variance assumption OK
+- **p < 0.05:** Evidence of heteroscedasticity
+
+**If detected, solutions:**
+
+1. Transform Y (try `log(income)`)
+2. Robust standard errors
+3. Add missing variables
+4. Accept it (point predictions still OK for prediction goals)
+
+---
+
+## Assumption: Normality of Residuals
+
+**What we assume:** Residuals are normally distributed
+
+**Why it matters:**
+
+- Less critical for **point predictions** (unbiased regardless)
+- Important for **confidence intervals** and **prediction intervals**
+- Needed for valid hypothesis tests (t-tests, F-tests)
+
+# Q-Q Plot
+```{r}
+#| echo: false
+#| eval: true
+#| fig-width: 5
+#| fig-height: 4
+
+q <- ggplot(pa_data, aes(sample = residuals)) +
+  stat_qq() +
+  stat_qq_line(color = "red") +
+  labs(title = "Q-Q Plot of Residuals",
+       x = "Theoretical Quantiles",
+       y = "Sample Quantiles") +
+  theme_minimal()
+
+print(q)
+
+```
+
+
+---
+
+## Assumption 3: No Multicollinearity
+**For multiple regression:** Predictors shouldn't be too correlated
+
+```{r}
+#| echo: true
+#| eval: false
+library(car)
+vif(model1)  # Variance Inflation Factor
+
+# Rule of thumb: VIF > 10 suggests problems
+# Not relevant with only 1 predictor!
+```
+
+**Why it matters:** Coefficients become unstable, hard to interpret
+
+---
+
+## Assumption 4: No Influential Outliers
+
+**Not all outliers are problems** - only those with high leverage AND large residuals
+
+::: {.columns}
+::: {.column width="50%"}
+### Visual Diagnostic
+
+```{r}
+#| echo: false
+#| eval: true
+#| fig-width: 5
+#| fig-height: 4
+
+# Add diagnostic measures
+pa_data <- pa_data %>%
+  mutate(
+    cooks_d = cooks.distance(model1),
+    leverage = hatvalues(model1),
+    is_influential = cooks_d > 4/nrow(pa_data)
+  )
+
+# Plot Cook's distance
+ggplot(pa_data, aes(x = 1:nrow(pa_data), y = cooks_d)) +
+  geom_point(aes(color = is_influential), size = 2) +
+  geom_hline(yintercept = 4/nrow(pa_data), 
+             linetype = "dashed", color = "red") +
+  scale_color_manual(values = c("grey60", "red")) +
+  labs(title = "Cook's Distance",
+       x = "Observation", y = "Cook's D") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+:::
+
+::: {.column width="50%"}
+### Identify Influential Points
+
+```{r}
+#| echo: false
+#| eval: true
+
+# Rule of thumb: Cook's D > 4/n
+threshold <- 4/nrow(pa_data)
+
+influential <- pa_data %>%
+  filter(cooks_d > threshold) %>%
+  select(NAME, total_popE, median_incomeE, cooks_d) %>%
+  arrange(desc(cooks_d))
+
+head(influential, 2)
+```
+
+**Interpretation:**
+
+- Cook's D > 4/n = potentially influential
+- High leverage + large residual = pulls regression line
+:::
+:::
+
+---
+
+## What To Do With Influential Points
+
+::: {.callout-tip}
+## Investigation Strategy
+
+1. **Investigate:** Why is this observation unusual? (data error? truly unique?)
+2. **Report:** Always note influential observations in your analysis
+3. **Sensitivity check:** Refit model without them - do conclusions change?
+4. **Don't automatically remove:** They might represent real, important cases
+
+**For policy:** An influential county might need **special attention**, not exclusion!
+:::
+
+::: {.callout-important}
+## Connection to Algorithmic Bias
+
+High-influence observations in demographic could represent **marginalized communities** or unique populations. Automatically removing them can erase important populations from analysis and lead to biased policy decisions.
+
+**Always investigate before removing!**
+:::
+
+---
+
+# Part 6: Improving the Model
+
+## Adding More Predictors
+
+Maybe population alone isn't enough:
+
+```{r}
+#| echo: false
+#| eval: true
+
+# Get more variables
+pa_data_full <- get_acs(
+  geography = "county",
+  state = "PA",
+  variables = c(
+    total_pop = "B01003_001",
+    median_income = "B19013_001",
+    percent_college = "B15003_022",
+    poverty_rate = "B17001_002"
+  ),
+  year = 2022,
+  output = "wide"
+)
+
+# Multiple regression
+model2 <- lm(median_incomeE ~ total_popE + percent_collegeE + poverty_rateE,
+             data = pa_data_full)
+
+summary(model2)
+```
+
+---
+
+## Log Transformations
+
+If relationship is curved, try transforming:
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Compare linear vs log
+model_linear <- lm(median_incomeE ~ total_popE, data = pa_data)
+model_log <- lm(median_incomeE ~ log(total_popE), data = pa_data)
+
+summary(model_log)
+
+# Check which residual plot looks better
+```
+
+**Interpretation changes:** Log models show percentage relationships
+
+---
+
+## Categorical Variables
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Create metro/non-metro indicator
+pa_data <- pa_data %>%
+  mutate(metro = ifelse(total_popE > 500000, 1, 0))
+
+model3 <- lm(median_incomeE ~ total_popE + metro, data = pa_data)
+summary(model3)
+```
+
+**R creates dummy variables automatically**
+
+---
+
+# Summary: The Regression Workflow
+
+1. **Understand the framework:** What's f? What's the goal?
+2. **Visualize first:** Does a linear model make sense?
+3. **Fit the model:** Estimate coefficients
+4. **Evaluate performance:** Train/test split, cross-validation
+5. **Check assumptions:** Residual plots, VIF, outliers
+6. **Improve if needed:** Transformations, more variables
+7. **Consider ethics:** Who could be harmed by this model?
+
+---
+
+# Key Takeaways {.smaller}
+
+**Statistical Learning:**
+
+- We're estimating f(X), the systematic relationship
+- Parametric methods assume a form (we chose linear)
+
+**Two purposes:**
+
+- Inference: understand relationships
+- Prediction: forecast new values
+
+**Model evaluation:**
+
+- In-sample fit ≠ out-of-sample performance
+- Beware overfitting!
+
+**Diagnostics matter:**
+
+- Always check assumptions
+- Plots reveal what R² hides
+
+---
+
+
+# 🏆 Learning- Focused In-Class Challenge: 
+*Best Predictive Model Competition*
+
+## The Task
+
+**Predict median home value** (`B25077_001`) for PA counties using any combination of predictors
+
+Build the model with **lowest 10-fold cross-validated RMSE**
+
+## Available Predictors
+
+```{r}
+#| eval: false
+#| echo: true
+challenge_data <- get_acs(
+  geography = "county",
+  state = "PA",
+  variables = c(
+    home_value = "B25077_001",      # YOUR TARGET
+    total_pop = "B01003_001",       # Total population
+    median_income = "B19013_001",   # Median household income
+    median_age = "B01002_001",      # Median age
+    percent_college = "B15003_022", # Bachelor's degree or higher
+    median_rent = "B25058_001",     # Median rent
+    poverty_rate = "B17001_002"     # Population in poverty
+  ),
+  year = 2022,
+  output = "wide"
+)
+```
+
+## Rules & Strategy
+
+**You can:**
+
+- Use any combination of predictors (time permitting, you can fetch more)
+- Try log transformations: `log(total_popE)`
+- Engineer new categorical features
+- Remove influential outliers (but document which!)
+
+**You must:**
+
+- Use 10-fold cross-validation to report final RMSE
+- Do a full diagnostic check (residual plot, Cook's D, or Breusch-Pagan)
+- Be ready to explain your model in 2 minutes
+
+::: {.callout-tip}
+## Hints
+- Start simple (one predictor), check diagnostics
+- Income and rent are probably highly correlated (multicollinearity!)
+- Try log transformation if relationship looks curved
+- Don't forget to remove NAs: `na.omit(challenge_data)`
+:::
+

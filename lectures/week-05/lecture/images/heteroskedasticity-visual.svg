@@ -1,0 +1,199 @@
+<svg viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg">
+  <!-- Title -->
+  <text x="500" y="30" font-size="24" font-weight="bold" text-anchor="middle" fill="#2C3E50">
+    How Missing Variables Cause Heteroskedasticity
+  </text>
+  
+  <!-- LEFT SIDE: Model with missing variable -->
+  <g id="incomplete-model">
+    <text x="250" y="70" font-size="16" font-weight="bold" text-anchor="middle" fill="#E74C3C">
+      Model 1: Income ~ Population (Missing Education)
+    </text>
+    
+    <!-- Scatter plot background -->
+    <rect x="50" y="90" width="400" height="250" fill="#F8F9FA" stroke="#DEE2E6" stroke-width="2" rx="5"/>
+    
+    <!-- Axes -->
+    <line x1="70" y1="320" x2="430" y2="320" stroke="#495057" stroke-width="2"/>
+    <line x1="70" y1="110" x2="70" y2="320" stroke="#495057" stroke-width="2"/>
+    
+    <!-- Axis labels -->
+    <text x="250" y="355" font-size="12" text-anchor="middle" fill="#495057">Population</text>
+    <text x="30" y="215" font-size="12" text-anchor="middle" fill="#495057" transform="rotate(-90 30 215)">Income</text>
+    
+    <!-- Regression line -->
+    <line x1="70" y1="310" x2="430" y2="130" stroke="#3498DB" stroke-width="3"/>
+    
+    <!-- Data points - small pop (tight) -->
+    <circle cx="100" cy="305" r="4" fill="#27AE60" opacity="0.7"/>
+    <circle cx="110" cy="300" r="4" fill="#27AE60" opacity="0.7"/>
+    <circle cx="120" cy="295" r="4" fill="#27AE60" opacity="0.7"/>
+    <circle cx="95" cy="308" r="4" fill="#27AE60" opacity="0.7"/>
+    <circle cx="115" cy="298" r="4" fill="#27AE60" opacity="0.7"/>
+    
+    <!-- Data points - medium pop (wider spread) -->
+    <circle cx="220" cy="240" r="4" fill="#F39C12" opacity="0.7"/>
+    <circle cx="230" cy="220" r="4" fill="#F39C12" opacity="0.7"/>
+    <circle cx="210" cy="255" r="4" fill="#F39C12" opacity="0.7"/>
+    <circle cx="240" cy="210" r="4" fill="#F39C12" opacity="0.7"/>
+    <circle cx="225" cy="265" r="4" fill="#F39C12" opacity="0.7"/>
+    
+    <!-- Data points - large pop (very scattered) -->
+    <circle cx="380" cy="150" r="4" fill="#E74C3C" opacity="0.7"/>
+    <circle cx="390" cy="190" r="4" fill="#E74C3C" opacity="0.7"/>
+    <circle cx="370" cy="120" r="4" fill="#E74C3C" opacity="0.7"/>
+    <circle cx="400" cy="200" r="4" fill="#E74C3C" opacity="0.7"/>
+    <circle cx="385" cy="110" r="4" fill="#E74C3C" opacity="0.7"/>
+    <circle cx="395" cy="170" r="4" fill="#E74C3C" opacity="0.7"/>
+    <circle cx="375" cy="140" r="4" fill="#E74C3C" opacity="0.7"/>
+    
+    <!-- Variance arrows showing increasing spread -->
+    <line x1="105" y1="302" x2="105" y2="312" stroke="#27AE60" stroke-width="2" opacity="0.5"/>
+    <line x1="225" y1="210" x2="225" y2="265" stroke="#F39C12" stroke-width="2" opacity="0.5"/>
+    <line x1="385" y1="110" x2="385" y2="200" stroke="#E74C3C" stroke-width="2" opacity="0.5"/>
+    
+    <!-- Labels for spread -->
+    <text x="105" y="330" font-size="10" text-anchor="middle" fill="#27AE60">Small variance</text>
+    <text x="225" y="280" font-size="10" text-anchor="middle" fill="#F39C12">Medium variance</text>
+    <text x="385" y="220" font-size="10" text-anchor="middle" fill="#E74C3C">Large variance</text>
+    
+    <!-- Residual plot -->
+    <text x="250" y="385" font-size="14" font-weight="bold" text-anchor="middle" fill="#495057">
+      Residual Plot: Clear Funnel Pattern
+    </text>
+    
+    <rect x="50" y="400" width="400" height="200" fill="#F8F9FA" stroke="#DEE2E6" stroke-width="2" rx="5"/>
+    
+    <!-- Residual axes -->
+    <line x1="70" y1="500" x2="430" y2="500" stroke="#495057" stroke-width="2"/>
+    <line x1="70" y1="420" x2="70" y2="580" stroke="#495057" stroke-width="2"/>
+    <line x1="70" y1="500" x2="430" y2="500" stroke="#E74C3C" stroke-width="1" stroke-dasharray="5,5"/>
+    
+    <text x="250" y="595" font-size="11" text-anchor="middle" fill="#495057">Fitted Values</text>
+    <text x="30" y="500" font-size="11" text-anchor="middle" fill="#495057" transform="rotate(-90 30 500)">Residuals</text>
+    
+    <!-- Residual points showing funnel -->
+    <circle cx="100" cy="498" r="3" fill="#27AE60" opacity="0.7"/>
+    <circle cx="110" cy="502" r="3" fill="#27AE60" opacity="0.7"/>
+    <circle cx="120" cy="497" r="3" fill="#27AE60" opacity="0.7"/>
+    
+    <circle cx="220" cy="490" r="3" fill="#F39C12" opacity="0.7"/>
+    <circle cx="230" cy="510" r="3" fill="#F39C12" opacity="0.7"/>
+    <circle cx="240" cy="485" r="3" fill="#F39C12" opacity="0.7"/>
+    
+    <circle cx="380" cy="460" r="3" fill="#E74C3C" opacity="0.7"/>
+    <circle cx="390" cy="540" r="3" fill="#E74C3C" opacity="0.7"/>
+    <circle cx="370" cy="450" r="3" fill="#E74C3C" opacity="0.7"/>
+    <circle cx="400" cy="550" r="3" fill="#E74C3C" opacity="0.7"/>
+    <circle cx="385" cy="470" r="3" fill="#E74C3C" opacity="0.7"/>
+    
+    <!-- Funnel shape outline -->
+    <path d="M 100 495 L 400 450 L 400 550 L 100 505 Z" fill="none" stroke="#E74C3C" stroke-width="2" stroke-dasharray="5,5" opacity="0.5"/>
+    
+    <text x="250" y="625" font-size="12" text-anchor="middle" fill="#E74C3C" font-weight="bold">
+      ⚠️ Heteroskedasticity Detected
+    </text>
+  </g>
+  
+  <!-- RIGHT SIDE: Complete model -->
+  <g id="complete-model">
+    <text x="750" y="70" font-size="16" font-weight="bold" text-anchor="middle" fill="#27AE60">
+      Model 2: Income ~ Population + Education
+    </text>
+    
+    <!-- Scatter plot background -->
+    <rect x="550" y="90" width="400" height="250" fill="#F8F9FA" stroke="#DEE2E6" stroke-width="2" rx="5"/>
+    
+    <!-- Axes -->
+    <line x1="570" y1="320" x2="930" y2="320" stroke="#495057" stroke-width="2"/>
+    <line x1="570" y1="110" x2="570" y2="320" stroke="#495057" stroke-width="2"/>
+    
+    <!-- Axis labels -->
+    <text x="750" y="355" font-size="12" text-anchor="middle" fill="#495057">Population</text>
+    <text x="530" y="215" font-size="12" text-anchor="middle" fill="#495057" transform="rotate(-90 530 215)">Income</text>
+    
+    <!-- Multiple regression lines for different education levels -->
+    <line x1="570" y1="290" x2="930" y2="150" stroke="#27AE60" stroke-width="2" opacity="0.7"/>
+    <line x1="570" y1="310" x2="930" y2="170" stroke="#3498DB" stroke-width="2" opacity="0.7"/>
+    <line x1="570" y1="270" x2="930" y2="130" stroke="#9B59B6" stroke-width="2" opacity="0.7"/>
+    
+    <text x="935" y="150" font-size="9" fill="#27AE60">High edu</text>
+    <text x="935" y="170" font-size="9" fill="#3498DB">Med edu</text>
+    <text x="935" y="133" font-size="9" fill="#9B59B6">Low edu</text>
+    
+    <!-- Data points - now clustered around their respective lines -->
+    <!-- Small pop -->
+    <circle cx="600" cy="305" r="4" fill="#27AE60" opacity="0.7"/>
+    <circle cx="610" cy="300" r="4" fill="#27AE60" opacity="0.7"/>
+    <circle cx="620" cy="295" r="4" fill="#27AE60" opacity="0.7"/>
+    
+    <!-- Medium pop -->
+    <circle cx="720" cy="230" r="4" fill="#3498DB" opacity="0.7"/>
+    <circle cx="730" cy="235" r="4" fill="#3498DB" opacity="0.7"/>
+    <circle cx="710" cy="225" r="4" fill="#3498DB" opacity="0.7"/>
+    
+    <!-- Large pop - now closer to lines -->
+    <circle cx="880" cy="155" r="4" fill="#9B59B6" opacity="0.7"/>
+    <circle cx="890" cy="160" r="4" fill="#9B59B6" opacity="0.7"/>
+    <circle cx="900" cy="168" r="4" fill="#27AE60" opacity="0.7"/>
+    <circle cx="885" cy="152" r="4" fill="#9B59B6" opacity="0.7"/>
+    <circle cx="895" cy="148" r="4" fill="#27AE60" opacity="0.7"/>
+    
+    <!-- Residual plot -->
+    <text x="750" y="385" font-size="14" font-weight="bold" text-anchor="middle" fill="#495057">
+      Residual Plot: Random Scatter
+    </text>
+    
+    <rect x="550" y="400" width="400" height="200" fill="#F8F9FA" stroke="#DEE2E6" stroke-width="2" rx="5"/>
+    
+    <!-- Residual axes -->
+    <line x1="570" y1="500" x2="930" y2="500" stroke="#495057" stroke-width="2"/>
+    <line x1="570" y1="420" x2="570" y2="580" stroke="#495057" stroke-width="2"/>
+    <line x1="570" y1="500" x2="930" y2="500" stroke="#27AE60" stroke-width="1" stroke-dasharray="5,5"/>
+    
+    <text x="750" y="595" font-size="11" text-anchor="middle" fill="#495057">Fitted Values</text>
+    <text x="530" y="500" font-size="11" text-anchor="middle" fill="#495057" transform="rotate(-90 530 500)">Residuals</text>
+    
+    <!-- Residual points showing even scatter -->
+    <circle cx="600" cy="505" r="3" fill="#27AE60" opacity="0.7"/>
+    <circle cx="650" cy="495" r="3" fill="#3498DB" opacity="0.7"/>
+    <circle cx="700" cy="508" r="3" fill="#9B59B6" opacity="0.7"/>
+    <circle cx="750" cy="492" r="3" fill="#27AE60" opacity="0.7"/>
+    <circle cx="800" cy="503" r="3" fill="#3498DB" opacity="0.7"/>
+    <circle cx="850" cy="497" r="3" fill="#9B59B6" opacity="0.7"/>
+    <circle cx="900" cy="502" r="3" fill="#27AE60" opacity="0.7"/>
+    <circle cx="620" cy="493" r="3" fill="#3498DB" opacity="0.7"/>
+    <circle cx="680" cy="510" r="3" fill="#27AE60" opacity="0.7"/>
+    <circle cx="820" cy="488" r="3" fill="#9B59B6" opacity="0.7"/>
+    <circle cx="880" cy="505" r="3" fill="#27AE60" opacity="0.7"/>
+    
+    <!-- Parallel bands showing constant variance -->
+    <line x1="570" y1="485" x2="930" y2="485" stroke="#27AE60" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+    <line x1="570" y1="515" x2="930" y2="515" stroke="#27AE60" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+    
+    <text x="750" y="625" font-size="12" text-anchor="middle" fill="#27AE60" font-weight="bold">
+      ✓ Constant Variance
+    </text>
+  </g>
+  
+  <!-- Arrow between plots -->
+  <path d="M 475 300 L 525 300" stroke="#495057" stroke-width="3" fill="none" marker-end="url(#arrowhead2)"/>
+  <text x="500" y="290" font-size="12" text-anchor="middle" fill="#495057" font-weight="bold">Add</text>
+  <text x="500" y="320" font-size="12" text-anchor="middle" fill="#495057" font-weight="bold">Education</text>
+  
+  <!-- Bottom explanation -->
+  <rect x="50" y="650" width="900" height="45" fill="#E8F4F8" stroke="#3498DB" stroke-width="2" rx="5"/>
+  <text x="500" y="670" font-size="13" text-anchor="middle" fill="#2C3E50">
+    <tspan font-weight="bold">Key Insight:</tspan> Large counties vary widely in income because some have high education (wealthy) and
+  </text>
+  <text x="500" y="686" font-size="13" text-anchor="middle" fill="#2C3E50">
+    others have low education (struggling). Adding education as a predictor accounts for this variation → constant variance!
+  </text>
+  
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arrowhead2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#495057"/>
+    </marker>
+  </defs>
+</svg>

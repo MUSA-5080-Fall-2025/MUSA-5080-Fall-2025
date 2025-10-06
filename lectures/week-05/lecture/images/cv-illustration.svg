@@ -1,0 +1,100 @@
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Title -->
+  <text x="400" y="30" font-size="24" font-weight="bold" text-anchor="middle" fill="#2C3E50">
+    10-Fold Cross-Validation
+  </text>
+  
+  <!-- Subtitle -->
+  <text x="400" y="55" font-size="14" text-anchor="middle" fill="#7F8C8D">
+    Each fold serves as test set once; all others as training
+  </text>
+  
+  <!-- Original Dataset -->
+  <text x="50" y="95" font-size="14" font-weight="bold" fill="#2C3E50">Full Dataset:</text>
+  <rect x="150" y="80" width="600" height="25" fill="#3498DB" stroke="#2980B9" stroke-width="2" rx="3"/>
+  <text x="450" y="98" font-size="12" fill="white" text-anchor="middle">67 PA Counties</text>
+  
+  <!-- Folds representation -->
+  <g id="folds">
+    <!-- Fold 1 -->
+    <g transform="translate(0, 130)">
+      <text x="50" y="18" font-size="12" fill="#2C3E50">Fold 1:</text>
+      <rect x="150" y="5" width="60" height="20" fill="#E74C3C" stroke="#C0392B" stroke-width="1.5" rx="2"/>
+      <rect x="210" y="5" width="540" height="20" fill="#95A5A6" stroke="#7F8C8D" stroke-width="1" rx="2"/>
+      <text x="180" y="19" font-size="10" fill="white" text-anchor="middle" font-weight="bold">TEST</text>
+      <text x="480" y="19" font-size="10" fill="white" text-anchor="middle">TRAIN</text>
+    </g>
+    
+    <!-- Fold 2 -->
+    <g transform="translate(0, 160)">
+      <text x="50" y="18" font-size="12" fill="#2C3E50">Fold 2:</text>
+      <rect x="150" y="5" width="60" height="20" fill="#95A5A6" stroke="#7F8C8D" stroke-width="1" rx="2"/>
+      <rect x="210" y="5" width="60" height="20" fill="#E74C3C" stroke="#C0392B" stroke-width="1.5" rx="2"/>
+      <rect x="270" y="5" width="480" height="20" fill="#95A5A6" stroke="#7F8C8D" stroke-width="1" rx="2"/>
+      <text x="240" y="19" font-size="10" fill="white" text-anchor="middle" font-weight="bold">TEST</text>
+    </g>
+    
+    <!-- Fold 3 -->
+    <g transform="translate(0, 190)">
+      <text x="50" y="18" font-size="12" fill="#2C3E50">Fold 3:</text>
+      <rect x="150" y="5" width="120" height="20" fill="#95A5A6" stroke="#7F8C8D" stroke-width="1" rx="2"/>
+      <rect x="270" y="5" width="60" height="20" fill="#E74C3C" stroke="#C0392B" stroke-width="1.5" rx="2"/>
+      <rect x="330" y="5" width="420" height="20" fill="#95A5A6" stroke="#7F8C8D" stroke-width="1" rx="2"/>
+      <text x="300" y="19" font-size="10" fill="white" text-anchor="middle" font-weight="bold">TEST</text>
+    </g>
+    
+    <!-- ... (dots to indicate more folds) -->
+    <text x="50" y="235" font-size="20" fill="#7F8C8D" text-anchor="middle">⋮</text>
+    <text x="450" y="235" font-size="20" fill="#7F8C8D" text-anchor="middle">⋮</text>
+    
+    <!-- Fold 10 -->
+    <g transform="translate(0, 260)">
+      <text x="50" y="18" font-size="12" fill="#2C3E50">Fold 10:</text>
+      <rect x="150" y="5" width="540" height="20" fill="#95A5A6" stroke="#7F8C8D" stroke-width="1" rx="2"/>
+      <rect x="690" y="5" width="60" height="20" fill="#E74C3C" stroke="#C0392B" stroke-width="1.5" rx="2"/>
+      <text x="420" y="19" font-size="10" fill="white" text-anchor="middle">TRAIN</text>
+      <text x="720" y="19" font-size="10" fill="white" text-anchor="middle" font-weight="bold">TEST</text>
+    </g>
+  </g>
+  
+  <!-- Arrow down -->
+  <path d="M 400 310 L 400 340" stroke="#2C3E50" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Results Box -->
+  <rect x="200" y="355" width="400" height="180" fill="#ECF0F1" stroke="#BDC3C7" stroke-width="2" rx="5"/>
+  
+  <text x="400" y="380" font-size="16" font-weight="bold" text-anchor="middle" fill="#2C3E50">
+    Results from Each Fold
+  </text>
+  
+  <!-- Performance metrics -->
+  <g transform="translate(220, 395)">
+    <text x="0" y="20" font-size="13" fill="#34495E">Fold 1 RMSE: $10,245</text>
+    <text x="0" y="40" font-size="13" fill="#34495E">Fold 2 RMSE: $9,876</text>
+    <text x="0" y="60" font-size="13" fill="#34495E">Fold 3 RMSE: $11,023</text>
+    <text x="0" y="80" font-size="13" fill="#7F8C8D">⋮</text>
+    <text x="0" y="100" font-size="13" fill="#34495E">Fold 10 RMSE: $10,112</text>
+  </g>
+  
+  <!-- Average box -->
+  <rect x="220" y="505" width="360" height="20" fill="#27AE60" stroke="#229954" stroke-width="2" rx="3"/>
+  <text x="400" y="520" font-size="13" font-weight="bold" text-anchor="middle" fill="white">
+    Average CV RMSE: $10,234 (more stable estimate!)
+  </text>
+  
+  <!-- Legend -->
+  <g transform="translate(50, 560)">
+    <rect x="0" y="0" width="25" height="15" fill="#E74C3C" stroke="#C0392B" stroke-width="1" rx="2"/>
+    <text x="30" y="12" font-size="11" fill="#2C3E50">Test Set (10% each fold)</text>
+    
+    <rect x="200" y="0" width="25" height="15" fill="#95A5A6" stroke="#7F8C8D" stroke-width="1" rx="2"/>
+    <text x="230" y="12" font-size="11" fill="#2C3E50">Training Set (90% each fold)</text>
+  </g>
+  
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#2C3E50"/>
+    </marker>
+  </defs>
+</svg>
