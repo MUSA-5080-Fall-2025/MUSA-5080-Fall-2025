@@ -1,8 +1,8 @@
 ---
 title: "Assignment 2: Spatial Analysis and Visualization"
 subtitle: "Healthcare Access and Equity in Pennsylvania"
-author: "Your Name Here"
-date: today
+author: "Xiaoqing (Kelsey) Chen"
+date: "2025-10-04"
 format: 
   html:
     code-fold: false
