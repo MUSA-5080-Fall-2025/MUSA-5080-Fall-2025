@@ -959,6 +959,15 @@ Build the model with **lowest 10-fold cross-validated RMSE**
 ## Available Predictors
 
 ```{r}
+install.packages("caret")
+library(tidycensus)
+library(tidyverse)
+library(knitr)
+library(caret)
+
+census_api_key("e17c1c6ce413dc3faca31a17a58ab3374404bb9e")
+
+
 #| eval: false
 #| echo: true
 challenge_data <- get_acs(
@@ -976,6 +985,68 @@ challenge_data <- get_acs(
   year = 2022,
   output = "wide"
 )
+
+names(challenge_data)
+
+pa_data <- challenge_data %>%
+  transmute(
+    county            = NAME,
+    home_valueE       = home_valueE,        # 目标
+    total_popE        = total_popE,
+    median_incomeE    = median_incomeE,
+    median_ageE       = median_ageE,
+    percent_collegeE  = percent_collegeE,   # 实际是“计数”
+    median_rentE      = median_rentE,
+    poverty_countE    = poverty_rateE       # 你之前把变量命名成了 poverty_rate，但它其实是“人数计数”
+  ) %>%
+  mutate(
+    # 这里再真正算“率”
+    poverty_rate      = poverty_countE / total_popE,
+    college_share     = pmin(percent_collegeE / total_popE, 1),
+    log_popE          = log(total_popE),
+    log_incomeE       = log(median_incomeE),
+    log_rentE         = log(median_rentE)
+  ) %>%
+  na.omit()
+
+set.seed(2025)
+train_control <- trainControl(method = "cv", number = 10)
+
+m1 <- train(
+  home_valueE ~ median_incomeE,
+  data = pa_data, method = "lm", trControl = train_control
+)
+m2 <- train(
+  home_valueE ~ median_incomeE + median_rentE + median_ageE,
+  data = pa_data, method = "lm", trControl = train_control
+)
+m3 <- train(
+  home_valueE ~ log_incomeE + log_rentE + median_ageE + poverty_countE + percent_collegeE + log_popE,
+  data = pa_data, method = "lm", trControl = train_control
+)
+m4 <- train(
+  home_valueE ~ median_incomeE + median_rentE + median_ageE + poverty_countE + percent_collegeE + total_popE,
+  data = pa_data, method = "lm", trControl = train_control
+)
+
+get_best_row <- function(m) {
+  if ("alpha" %in% names(m$results)) {
+    m$results %>% dplyr::slice_min(RMSE, n = 1) %>% mutate(model = deparse(m$call$formula))
+  } else {
+    m$results %>% mutate(model = deparse(m$call$formula))
+  }
+}
+
+rmse_comp <- bind_rows(get_best_row(m1), get_best_row(m2), get_best_row(m3), get_best_row(m4)) %>%
+  select(model, RMSE, Rsquared, MAE) %>%
+  arrange(RMSE)
+
+print(rmse_comp)
+
+cat("\nBest by 10-fold RMSE:\n", rmse_comp$model[1], "\nRMSE = ", rmse_comp$RMSE[1], "\n")
+
+
+
 ```
 
 ## Rules & Strategy
