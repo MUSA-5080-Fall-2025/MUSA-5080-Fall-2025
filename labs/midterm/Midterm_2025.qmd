@@ -1,0 +1,592 @@
+---
+title: "Midterm Challenge: Philadelphia Housing Price Prediction"
+subtitle: "MUSA 5080 - Public Policy Analytics"
+format: 
+  html:
+    toc: true
+    toc-location: left
+    code-fold: show
+    theme: cosmo
+---
+
+## Overview
+
+**Due Date:** October 27, 2025
+
+**In-Class Presentations:** October 27, 2025 (5 minutes per team)
+
+**Weight:** 15% of final grade
+
+**Team:** You'll work with your table-mates as a team. Feel free to delegate. Everyone should upload their final products onto their own portfolio websites. Be sure to acknowledge your team-mates.
+
+**Submission Format:**
+
+1. **Presentation Slides** (.qmd → revealjs, ~10-15 slides) - Main deliverable (see my weekly lecture notes for inspiration!)
+2. **Technical Appendix** (.qmd → HTML document) - Supporting details
+
+---
+
+## The Challenge
+
+You are consultancy (please name your consultancy) competing to win the bid to work for a project for the **Philadelphia Office of Property Assessment**. The city wants to improve its Automated Valuation Model (AVM) for property tax assessments. Your task is to build a predictive model for residential sale prices and **present your findings** to city officials in a 5-minute briefing. 
+
+**Deliverables:**
+
+1. **Presentation slides** (10-15 slides MAX) - Your main findings for stakeholders
+2. **Technical appendix** (HTML document) - All code, diagnostics, and detailed analysis
+3. **5-minute in-class presentation** - Deliver your slides on October 27th
+
+**Your goal:** Predict 2023-2024 home sale prices accurately while communicating findings clearly to a policy audience.
+
+---
+
+## Two-Part Submission
+
+### Part A: Presentation Slides (Primary Deliverable)
+
+**Format:** Quarto revealjs presentation
+
+**Example YAML:**
+```yaml
+---
+title: "Philadelphia Housing Price Prediction"
+subtitle: "Improving Property Tax Assessments"
+author: "Your Name"
+format: 
+  revealjs:
+    theme: simple
+    slide-number: true
+    smaller: true
+---
+```
+
+**Content:** ~10-15 (could be less!!) slides covering:
+1. Research question & motivation (1-2 slides)
+2. Data overview (1 slide)
+3. Key visualizations (2-3 slides)
+4. Model comparison results (1-2 slides)
+5. Main findings (2-3 slides)
+6. Policy recommendations (1-2 slides)
+
+**Audience:** City officials who don't know R or care about the nitty gritty of stats. They just want the best estimates possible. 
+
+**No code** in these slides - just polished visualizations and key takeaways
+
+---
+
+### Part B: Technical Appendix (Supporting Documentation)
+
+**Format:** Quarto HTML document
+
+**Example YAML:**
+```yaml
+---
+title: "Philadelphia Housing Model - Technical Appendix"
+author: "Your Name"
+format: 
+  html:
+    code-fold: show
+    toc: true
+    toc-location: left
+    theme: cosmo
+---
+```
+
+**Content:** All the technical details:
+- Complete data cleaning code
+- All EDA visualizations
+- Feature engineering code
+- Full model outputs
+- Diagnostic plots
+- Detailed interpretations
+
+**Audience:** Data scientists and technical reviewers
+
+**All code visible** - this is where you show your work
+
+---
+
+## Data Sources
+
+### Primary Dataset: Philadelphia Property Sales
+
+**Source:** [Philadelphia Property Sales](https://metadata.phila.gov/#home/datasetdetails/5543865f20583086178c4ee5/representationdetails/55d624fdad35c7e854cb21a4/)
+
+This dataset contains actual property sales with:
+
+- Sale price
+- Sale date
+- Property characteristics (bedrooms, bathrooms, sq ft, etc.)
+- Property location (address, coordinates)
+
+**You will need to:**
+
+- Download the data
+- Clean it (missing values, outliers, data errors)
+- Filter to 2023-2024 residential sales only
+
+
+### Secondary Datasets (You Choose!)
+
+**Required:** Browse the OpenPhily Data portal and use Census Data to incorporate spatial features into your model.
+
+**Your task:** Think like an urban planner. What location factors matter for housing prices in Philadelphia?
+
+---
+
+## Assignment Structure
+
+Your work should follow this workflow, with results split between presentation and appendix:
+
+### Phase 1: Data Preparation (Technical Appendix)
+
+**Load and clean Philadelphia sales data:**
+
+- Filter to residential properties, 2023-2024 sales
+- Remove obvious errors
+- Handle missing values
+- Document all cleaning decisions
+
+**Load secondary data:**
+
+- Census data (tidycensus):
+- Spatial amenities (OpenDataPhilly)
+- Join to sales data appropriately
+- Make sure you have the correct CRS!
+
+**Deliverable (Appendix only):**
+
+- Complete data cleaning code
+- Summary tables showing before/after dimensions
+- Narrative explaining decisions
+
+---
+
+### Phase 2: Exploratory Data Analysis
+
+**Create at least 5 professional visualizations:**
+
+1. Distribution of sale prices (histogram)
+2. Geographic distribution (map)
+3. Price vs. structural features (scatter plots)
+4. Price vs. spatial features (scatter plots)
+5. One creative visualization
+
+**For presentation slides:** Select your **best 2-3 visualizations** that tell a compelling story
+
+**For appendix:** Include all visualizations with detailed interpretations
+
+**Example presentation slide:**
+
+```markdown
+## Where Are Expensive Homes in Philadelphia?
+
+[Beautiful map showing price patterns]
+
+**Key Findings:**
+- Center City and University City command premium prices
+- River wards show emerging appreciation
+- Northeast Philadelphia remains most affordable
+```
+
+---
+
+### Phase 3: Feature Engineering (Technical Appendix)
+
+**Create spatial features: (these are examples below, but how you construct your model is up to your team)**
+
+1. **Buffer-based features**:
+
+   - Parks within 500ft, 1000ft
+   - Transit stops within 400ft
+   - Schools, crime, etc.
+
+2. **k-Nearest Neighbor features**:
+
+   - Average distance to k nearest parks, transit, etc.
+
+3. **Census variables**:
+
+   - Join median income, education, poverty, etc.
+
+4. **Interaction terms**:
+
+   - Theoretically motivated combinations
+
+**Deliverable (Appendix only):**
+
+- All feature engineering code
+- Summary table of features created
+- Brief justification for each feature
+
+---
+
+### Phase 4: Model Building
+
+**Build models progressively: (for example)**
+
+1. Structural features only
+2. + Census variables
+3. + Spatial features
+4. + Interactions and fixed effects
+
+**For presentation slides:** Show **one comparison table** (RMSE, R² for 4 different models you constructed in your process)
+
+**For appendix:**
+
+- Complete model code
+- Full stargazer/modelsummary output
+- Coefficient interpretations
+
+**Example presentation slide:**
+
+```markdown
+## Model Performance Improves with Each Layer
+
+| Model | CV RMSE (log) | R² |
+|-------|---------------|-----|
+| Structural Only | 0.42 | 0.61 |
+| + Census | 0.38 | 0.69 |
+| + Spatial | 0.31 | 0.78 |
+| + Interactions/FE | 0.26 | 0.84 |
+
+**Bottom line:** Neighborhood effects matter most!
+```
+
+---
+
+### Phase 5: Model Validation
+
+**Use 10-fold cross-validation:**
+- Compare all 4 models
+- Report RMSE, MAE, R² for each
+- Create predicted vs. actual plot
+
+**For presentation slides:** Final CV results table (shown above) + one compelling visual
+
+**For appendix:** 
+
+- Complete CV code
+- Detailed results
+- Predicted vs. actual scatter plot
+- Discussion of which features matter most
+
+---
+
+### Phase 6: Model Diagnostics (Technical Appendix Only)
+
+**Check assumptions for best model:**
+
+- Residual plot (linearity, homoscedasticity)
+- Q-Q plot (normality)
+- Cook's distance (influential observations)
+
+**Deliverable (Appendix only):**
+
+- All 3 diagnostic plots
+- Interpretation of each
+- How you addressed violations (if any)
+
+**Note:** Don't include diagnostic plots in presentation - too technical!
+
+---
+
+### Phase 7: Conclusions & Recommendations
+
+**Answer these questions:**
+
+1. What is your final model's accuracy?
+2. Which features matter most for Philadelphia prices?
+3. Which neighborhoods are hardest to predict?
+4. Equity concerns?
+5. Limitations?
+
+**For presentation slides:** 1-2 slides with clear, concise answers (bullet points)
+
+**For appendix:** 2-3 paragraphs with detailed discussion
+
+**Example presentation slide:**
+
+```markdown
+## Key Findings & Recommendations
+
+**Model Accuracy:** RMSE = 0.26 (log scale) ≈ 26% typical error
+
+**Top Predictors:**
+- Neighborhood fixed effects (largest impact)
+- Square footage (β = 0.0003, p < 0.001)
+- Distance to transit (β = -0.05, p < 0.001)
+
+**Recommendations:**
+✓ Current AVM undervalues transit-accessible properties  
+✓ Model struggles in rapidly gentrifying neighborhoods  
+```
+
+---
+
+## Submission Requirements
+
+### What to Submit (by 9:59 AM, October 27, 2025)
+
+**Upload to Canvas - A link to your portfolio that Contains**
+
+1. **Presentation Slides**
+
+   - `LastName_FirstName_Presentation.html` (rendered slides)
+   - `LastName_FirstName_Presentation.qmd` (source file)
+   - Must use `format: revealjs`
+   - 10-15 slides maximum
+   - No code visible in slides
+
+2. **Technical Appendix**
+
+   - `LastName_FirstName_Appendix.html` (rendered document)
+   - `LastName_FirstName_Appendix.qmd` (source file)
+   - Must use `format: html`
+   - All code visible and commented
+   - Complete analysis documented
+
+3. **Data files** OR clear download instructions in appendix
+
+**For Teams:** Use `LastName1_LastName2_Presentation.html`
+
+### In-Class Presentation (October 27, 2025)
+
+**Format:** 5 minutes per team
+
+**What to present:**
+
+- Walk through your presentation slides. Choose your team's spoke's person or take turns You'll all stand up there and try to look calm, confident, & collected.
+- Hit the highlights - research question, key viz, model results, recommendations
+- Speak to a policy audience (your classmates are pretending to be city officials)
+- Be ready for 1-2 questions
+- You are trying to win the bid! Convince the audience of your agency's work.
+
+**What NOT to do:**
+
+- Don't read slides verbatim
+- Don't show code
+- Don't go into technical details
+- Don't go over 5 minutes (I'll cut you off!)
+
+---
+
+## Grading Rubric (Scaled to 15% of course grade)
+
+### Presentation Slides 
+
+| Component | Points | Criteria |
+|-----------|--------|----------|
+| **Research Question** | 2 | Clear motivation, Set the stage |
+| **Data Overview** | 2 | Concise description of sources, sample size |
+| **Visualizations** | 3 | 2-3 polished, publication-quality visualizations; clear takeaways |
+| **Model Comparison** | 3 | Clean results table; clear winner; interprets improvement |
+| **Key Findings** | 3 | Top predictors identified; coefficients interpreted correctly |
+| **Presentation Quality** | 3 | Professional design, no typos, flows logically, appropriate for audience |
+
+**Key:** Slides should tell a compelling story without technical jargon. Imagine presenting to the Deputy Mayor.
+
+---
+
+### In-Class Presentation
+
+| Component | Points | Criteria |
+|-----------|--------|----------|
+| **Content** | 2 | Covers key points efficiently, answers questions thoughtfully |
+| **Time Management** | 2 | Finishes within 5 minutes without rushing |
+
+---
+
+### Technical Appendix 
+
+| Component | Points | Criteria |
+|-----------|--------|----------|
+| **Data Cleaning** | 3 | Complete code, proper filtering, missing value handling, documentation |
+| **EDA** | 3 | 5+ visualizations, each with interpretation |
+| **Feature Engineering** | 3 | Buffers , kNN , census , interactions , all properly created |
+| **Model Building** | 3 | 4 progressive models, proper specification, handles sparse categories |
+| **Cross-Validation** | 3 | Proper 10-fold CV, results table, code runs without errors |
+| **Diagnostics** | 3 | Residual plots included, interpreted, violations addressed |
+| **Code Quality** | 3 | Clean, commented, reproducible, follows best practices, no errors |
+
+**Key:** This is where technical reviewers verify your work. All code must run without errors & be reproducible!!.
+
+---
+
+
+## Example Presentation Structure
+
+**Slide 1: Title**
+- Your team name and teammates
+- Project title
+- Date
+
+**Slide 2: The Problem**
+
+
+**Slide 3: Data Sources**
+- Property sales (n = X,XXX, 2023-2024)
+- Census ACS (income, education, poverty)
+- OpenDataPhilly (parks, transit, crime)
+
+**Slide 4: Where Are Expensive Homes?**
+- [Map visualization]
+- Key pattern observed
+
+**Slide 5: What Drives Prices?**
+- [Best scatter plot or faceted visualization]
+- Key relationship identified
+
+**Slide 6: Model Comparison**
+- [Results table]
+- "Each layer improves prediction"
+
+**Slide 7: Top Predictors**
+- Neighborhood (biggest impact)
+- Square footage (β = X)
+- Transit access (β = Y)
+
+**Slide 8: Model Performance**
+- Final RMSE: 0.26 (log scale)
+- Translation: ~26% typical error
+- Beats baseline by 40%
+
+**Slide 9: Hardest to Predict**
+- [Visualization of residuals by neighborhood]
+
+
+**Slide 10: Recommendations**
+
+
+**Slide 11: Limitations & Next Steps**
+
+
+**Slide 12: Questions?**
+- Thank you
+- [Contact info]
+
+---
+
+## Tips for Success
+
+### Start Early
+- Data cleaning always takes longer than expected
+- OpenDataPhilly can be slow to download
+- Leave time for troubleshooting AND RENDERING!!!
+
+### Check Your Work
+
+- Organize your file directory from the beginning. 
+- Run your entire .qmd file from scratch before submitting 
+- Make sure all visualizations display
+- Check that your narrative flows logically
+
+
+
+---
+
+## Frequently Asked Questions
+
+**Q: Do I have to create both slides AND an appendix?**  
+
+A: Yes! Slides are your main deliverable (present findings). Appendix proves you did the work correctly.
+
+**Q: Can code appear in my presentation slides?** 
+
+A: NO! Slides are for city officials. All code goes in the technical appendix.
+
+**Q: How many slides should I have?**  
+
+A: 10-15 maximum. Quality over quantity. Each slide should have a clear purpose.
+
+**Q: Can I use a different city?**  
+A: No, everyone uses Philadelphia for comparability.
+
+**Q: How do I make my .qmd render as revealjs slides?**  
+A: Use `format: revealjs` in your YAML (see template above). Test it early!
+
+**Q: My presentation is 8 minutes. Is that okay?**  
+A: NO! You must cut it to 5 minutes. Practice and trim ruthlessly.
+
+**Q: Should I include all 5 EDA visualizations in my slides?**  
+A: No! Slides should have your best 2-3 visualizations. Put all 5 in the appendix.
+
+**Q: My RMSE is 0.35 in log scale. Is that good?**  
+A: Depends on your data, but 0.25-0.45 is typical for hedonic models. Compare to your baseline or put your data back into dollars!
+
+**Q: Should I remove all outliers?**  
+A: No! Only remove obvious errors. Use log transformation to handle legitimate outliers.
+
+**Q: What if my code works on my computer but not when I knit?**  
+A: Start fresh, restart R, knit in a clean session. Check for hard-coded paths.
+
+**Q: Can I use ChatGPT/Claude to write my analysis?**  
+A: You may use AI for debugging code, but NOT for writing your analysis. 
+
+**Q: How formal should my presentation be?**  
+A: Professional but not stuffy. Like you're briefing a city council member who's smart but doesn't know statistics.
+
+**Q: What happens if I go over 5 minutes?**  
+A: I'll politely cut you off and you'll lose points. Practice with a timer!
+
+---
+
+## Example Workflow
+
+**Week 1:**
+- Download data
+- Initial cleaning
+- Basic EDA
+
+**Week 2:**
+- Feature engineering
+- Build 4 models
+- Run cross-validation
+- Diagnostics
+- Write conclusions
+- Proofread and submit
+
+---
+
+## Academic Integrity
+
+- You may discuss concepts with classmates
+- You may NOT share code or slides
+- All work must be your own (or your teams)
+- Cite any external resources used
+- Please acknowledge how you used AI in your work and which AI you used (For example, Claude helped me today in coming up with a draft of this assignment, but I edited it thoroughly!)
+
+---
+
+## Final Checklist Before Submitting
+
+### Presentation Slides
+- [ ] Renders correctly as revealjs slides
+- [ ] 10-15 slides maximum
+- [ ] No code visible anywhere
+- [ ] 2-3 polished visualizations
+- [ ] Clear model comparison table
+- [ ] No typos or formatting errors
+- [ ] Professional theme applied
+- [ ] Tested presentation timing (<5 minutes)
+
+### Technical Appendix
+- [ ] Renders correctly as HTML document
+- [ ] All code visible and commented
+- [ ] Data cleaning fully documented
+- [ ] 5+ EDA visualizations included
+- [ ] All features properly created
+- [ ] 4 models with full output
+- [ ] 10-fold CV code runs without errors
+- [ ] Diagnostic plots included
+- [ ] Sparse categories handled correctly
+- [ ] Tested that it knits without errors
+
+### Both Files
+- [ ] Proper file naming convention
+- [ ] Both .qmd source files included
+- [ ] Data sources clearly documented
+- [ ] No hard-coded file paths (use relative paths! - this should be reproducible)
+- [ ] Uploaded to Canvas on time
+
+---

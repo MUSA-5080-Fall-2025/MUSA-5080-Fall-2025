@@ -159,6 +159,8 @@ median_income_pa <- median(pa_income$estimate, na.rm = TRUE)
 income_threshold <- median_income_pa * 0.8
 elderly_threshold <- 0.15
 
+
+
 pa_demo_final <- pa_demo_final %>%
   mutate(elderly_share = age65plus / total_pop)
 
@@ -177,10 +179,10 @@ pct_vulnerable
 ```
 
 **Questions to answer:**
-- What income threshold did you choose and why?  【】
-- What elderly population threshold did you choose and why?  【】
-- How many tracts meet your vulnerability criteria?  【】
-- What percentage of PA census tracts are considered vulnerable by your definition?  【】
+- What income threshold did you choose and why?  【I choose the value of 80% of the country median income, so income threshold equals to $56,150. The reason is to low the influence of extremely high-income regions.】
+- What elderly population threshold did you choose and why?  【I choose 15% of total population aged 65 or older as elderly population. The reason it that the percentage of aged poeple of whole country was about 17%.】
+- How many tracts meet your vulnerability criteria?  【There are 480 tracts met my vulnerability criteria.】
+- What percentage of PA census tracts are considered vulnerable by your definition?  【There are nearly 14% of the PA census tracts are considered vulnerable.】
 
 ---
 
@@ -191,12 +193,22 @@ For each vulnerable tract, calculate the distance to the nearest hospital.
 **Your Task:**
 ```{r}
 # Transform to appropriate projected CRS
+pa_hospitals <- st_read("D:/Code/MUSA-5080-Fall-2025/labs/lab_2/data/hospitals.geojson")
+vulnerable_tracts_proj <- st_transform(vulnerable_tracts, 26918)
+pa_hospitals_proj <- st_transform(pa_hospitals, 26918)
 
 
 # Calculate distance from each tract centroid to nearest hospital
+tract_centroids <- st_centroid(vulnerable_tracts_proj)
+dist_matrix <- st_distance(tract_centroids, pa_hospitals_proj)
+nearest_dist <- apply(dist_matrix, 1, min)  
+vulnerable_tracts_proj <- vulnerable_tracts_proj %>%
+  mutate(dist_to_nearest_hospital_m = as.numeric(nearest_dist),
+         dist_to_nearest_hospital_miles = dist_to_nearest_hospital_m / 1609.34)
 
+summary(vulnerable_tracts_proj$dist_to_nearest_hospital_miles)
 
-
+sum(vulnerable_tracts_proj$dist_to_nearest_hospital_miles > 15)
 
 ```
 
@@ -206,9 +218,9 @@ For each vulnerable tract, calculate the distance to the nearest hospital.
 - Explain why you chose your projection
 
 **Questions to answer:**
-- What is the average distance to the nearest hospital for vulnerable tracts?
-- What is the maximum distance?
-- How many vulnerable tracts are more than 15 miles from the nearest hospital?
+- What is the average distance to the nearest hospital for vulnerable tracts?  【Nearly 4 miles.】
+- What is the maximum distance?  【Approximately 26 miles.】
+- How many vulnerable tracts are more than 15 miles from the nearest hospital?  【21】
 
 ---
 
@@ -219,16 +231,25 @@ Define "underserved" as vulnerable tracts that are more than 15 miles from the n
 **Your Task:**
 ```{r}
 # Create underserved variable
+vulnerable_tracts_proj <- vulnerable_tracts_proj %>%
+  mutate(
+    underserved = dist_to_nearest_hospital_miles > 15
+  )
 
+num_underserved <- sum(vulnerable_tracts_proj$underserved, na.rm = TRUE)
+pct_underserved <- num_underserved / nrow(vulnerable_tracts_proj) * 100
 
-
+list(
+  underserved_tracts = num_underserved,
+  percent_underserved = round(pct_underserved, 2)
+)
 
 ```
 
 **Questions to answer:**
-- How many tracts are underserved?
-- What percentage of vulnerable tracts are underserved?
-- Does this surprise you? Why or why not?
+- How many tracts are underserved? 【21】
+- What percentage of vulnerable tracts are underserved?  【Nearly 4.4%.】
+- Does this surprise you? Why or why not?  【No. Nearly 4% is a tiny percentage compared to the whole PA. And most of the residents live in urban areas where hospitals are relatively close.】
 
 ---
 
@@ -239,10 +260,15 @@ Use spatial joins and aggregation to calculate county-level statistics about vul
 **Your Task:**
 ```{r}
 # Spatial join tracts to counties
+pa_counties_proj <- st_transform(pa_counties, 26918)
 
+vuln_with_county <- st_join(
+  vulnerable_tracts_proj,
+  pa_counties_proj %>% dplyr::select(county_geoid = FIPS_COUNT, county_name = COUNTY_NAM),
+  join = st_within, left = TRUE
+)
 
 # Aggregate statistics by county
-
 
 
 
@@ -256,9 +282,9 @@ Use spatial joins and aggregation to calculate county-level statistics about vul
 - Total vulnerable population
 
 **Questions to answer:**
-- Which 5 counties have the highest percentage of underserved vulnerable tracts?
-- Which counties have the most vulnerable people living far from hospitals?
-- Are there any patterns in where underserved counties are located?
+- Which 5 counties have the highest percentage of underserved vulnerable tracts?  【】
+- Which counties have the most vulnerable people living far from hospitals?  【】
+- Are there any patterns in where underserved counties are located?  【】
 
 ---
 

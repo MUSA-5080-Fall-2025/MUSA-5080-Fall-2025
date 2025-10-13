@@ -1,0 +1,2925 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<script src="week6_slides_files/libs/clipboard/clipboard.min.js"></script>
+<script src="week6_slides_files/libs/quarto-html/tabby.min.js"></script>
+<script src="week6_slides_files/libs/quarto-html/popper.min.js"></script>
+<script src="week6_slides_files/libs/quarto-html/tippy.umd.min.js"></script>
+<link href="week6_slides_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="week6_slides_files/libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="week6_slides_files/libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.6.42">
+
+  <meta name="author" content="Dr.&nbsp;Elizabeth Delmelle">
+  <meta name="dcterms.date" content="2025-10-14">
+  <title>Spatial Machine Learning &amp; Advanced Regression</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="week6_slides_files/libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="week6_slides_files/libs/revealjs/dist/reveal.css">
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      { color: #003b4f; background-color: #f1f3f5; }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span { color: #003b4f; } /* Normal */
+    code span.al { color: #ad0000; } /* Alert */
+    code span.an { color: #5e5e5e; } /* Annotation */
+    code span.at { color: #657422; } /* Attribute */
+    code span.bn { color: #ad0000; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #003b4f; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #20794d; } /* Char */
+    code span.cn { color: #8f5902; } /* Constant */
+    code span.co { color: #5e5e5e; } /* Comment */
+    code span.cv { color: #5e5e5e; font-style: italic; } /* CommentVar */
+    code span.do { color: #5e5e5e; font-style: italic; } /* Documentation */
+    code span.dt { color: #ad0000; } /* DataType */
+    code span.dv { color: #ad0000; } /* DecVal */
+    code span.er { color: #ad0000; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #ad0000; } /* Float */
+    code span.fu { color: #4758ab; } /* Function */
+    code span.im { color: #00769e; } /* Import */
+    code span.in { color: #5e5e5e; } /* Information */
+    code span.kw { color: #003b4f; font-weight: bold; } /* Keyword */
+    code span.op { color: #5e5e5e; } /* Operator */
+    code span.ot { color: #003b4f; } /* Other */
+    code span.pp { color: #ad0000; } /* Preprocessor */
+    code span.sc { color: #5e5e5e; } /* SpecialChar */
+    code span.ss { color: #20794d; } /* SpecialString */
+    code span.st { color: #20794d; } /* String */
+    code span.va { color: #111111; } /* Variable */
+    code span.vs { color: #20794d; } /* VerbatimString */
+    code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="week6_slides_files/libs/revealjs/dist/theme/quarto-8f3eebe07241f08526c91a7e9cbef8fd.css">
+  <link href="week6_slides_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="week6_slides_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="week6_slides_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="week6_slides_files/libs/revealjs/plugin/reveal-chalkboard/font-awesome/css/all.css" rel="stylesheet">
+  <link href="week6_slides_files/libs/revealjs/plugin/reveal-chalkboard/style.css" rel="stylesheet">
+  <link href="week6_slides_files/libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+</head>
+<body class="quarto-light">
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" class="quarto-title-block center">
+  <h1 class="title">Spatial Machine Learning &amp; Advanced Regression</h1>
+  <p class="subtitle">Week 6: MUSA 5080</p>
+
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+Dr.&nbsp;Elizabeth Delmelle 
+</div>
+</div>
+</div>
+
+  <p class="date">2025-10-14</p>
+</section>
+<section>
+<section id="todays-journey" class="title-slide slide level1 center">
+<h1>Today’s Journey</h1>
+
+</section>
+<section id="what-well-cover" class="slide level2">
+<h2>What We’ll Cover</h2>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p><strong>Warm-Up: Build a Baseline Model</strong></p>
+<ul>
+<li>Quick review of Week 5 regression</li>
+<li>Create simple structural model</li>
+<li>Identify its limitations</li>
+</ul>
+<p><strong>Part 1: Expanding Your Toolkit</strong></p>
+<ul>
+<li>Categorical variables</li>
+<li>Interactions</li>
+<li>Polynomial terms</li>
+</ul>
+</div><div class="column" style="width:50%;">
+<p><strong>Part 2: Why Space Matters</strong></p>
+<ul>
+<li>Hedonic model framework</li>
+<li>Tobler’s First Law</li>
+<li>Spatial autocorrelation</li>
+</ul>
+<p><strong>Part 3: Creating Spatial Features</strong></p>
+<ul>
+<li>Buffer aggregation</li>
+<li>k-Nearest Neighbors</li>
+<li>Distance to amenities</li>
+</ul>
+</div></div>
+<p><strong>Part 4: Fixed Effects</strong></p>
+</section>
+<section class="slide level2">
+
+</section></section>
+<section>
+<section id="warm-up-build-a-baseline-model" class="title-slide slide level1 center">
+<h1>Warm-Up: Build a Baseline Model</h1>
+
+</section>
+<section id="lets-build-something-simple-together" class="slide level2">
+<h2>Let’s Build Something Simple Together</h2>
+<p>We’ll start by creating a basic model using <strong>only structural features</strong> - this will be our baseline to improve upon today.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href=""></a><span class="co"># Load packages and data</span></span>
+<span id="cb1-2"><a href=""></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-3"><a href=""></a><span class="fu">library</span>(sf)</span>
+<span id="cb1-4"><a href=""></a><span class="fu">library</span>(here)</span>
+<span id="cb1-5"><a href=""></a></span>
+<span id="cb1-6"><a href=""></a><span class="co"># Load Boston housing data</span></span>
+<span id="cb1-7"><a href=""></a>boston <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">"data/boston.csv"</span>))</span>
+<span id="cb1-8"><a href=""></a></span>
+<span id="cb1-9"><a href=""></a><span class="co"># Quick look at the data</span></span>
+<span id="cb1-10"><a href=""></a><span class="fu">glimpse</span>(boston)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Rows: 1,485
+Columns: 24
+$ ...1       &lt;dbl&gt; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, …
+$ Parcel_No  &lt;dbl&gt; 100032000, 100058000, 100073000, 100112000, 100137000, 1001…
+$ SalePrice  &lt;dbl&gt; 450000, 600000, 450000, 670000, 260000, 355000, 665000, 355…
+$ PricePerSq &lt;dbl&gt; 228.89, 164.34, 105.98, 291.94, 217.21, 190.96, 227.35, 120…
+$ LivingArea &lt;dbl&gt; 1966, 3840, 4246, 2295, 1197, 1859, 2925, 2904, 892, 1916, …
+$ Style      &lt;chr&gt; "Conventional", "Semi?Det", "Decker", "Row\xa0End", "Coloni…
+$ GROSS_AREA &lt;dbl&gt; 3111, 5603, 6010, 3482, 1785, 2198, 4341, 3892, 1658, 3318,…
+$ NUM_FLOORS &lt;dbl&gt; 2.0, 3.0, 3.0, 3.0, 2.0, 1.5, 3.0, 3.0, 2.0, 2.0, 1.5, 2.0,…
+$ R_BDRMS    &lt;dbl&gt; 4, 8, 9, 6, 2, 3, 8, 6, 2, 2, 4, 3, 3, 3, 6, 8, 4, 4, 3, 2,…
+$ R_FULL_BTH &lt;dbl&gt; 2, 3, 3, 3, 1, 3, 3, 3, 1, 2, 2, 3, 1, 1, 3, 3, 2, 3, 1, 2,…
+$ R_HALF_BTH &lt;dbl&gt; 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0,…
+$ R_KITCH    &lt;dbl&gt; 2, 3, 3, 3, 1, 2, 3, 3, 1, 2, 2, 3, 1, 1, 3, 3, 2, 3, 2, 2,…
+$ R_AC       &lt;chr&gt; "N", "N", "N", "N", "N", "N", "N", "N", "N", "N", "N", "N",…
+$ R_FPLACE   &lt;dbl&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,…
+$ LU         &lt;chr&gt; "R2", "R3", "R3", "R3", "R1", "R2", "R3", "E", "R1", "R2", …
+$ OWN_OCC    &lt;chr&gt; "Y", "N", "Y", "N", "N", "N", "N", "N", "N", "Y", "N", "N",…
+$ R_BLDG_STY &lt;chr&gt; "CV", "SD", "DK", "RE", "CL", "CV", "DK", "DK", "RE", "TF",…
+$ R_ROOF_TYP &lt;chr&gt; "H", "F", "F", "F", "F", "G", "F", "F", "G", "F", "G", "F",…
+$ R_EXT_FIN  &lt;chr&gt; "M", "B", "M", "M", "P", "M", "M", "A", "A", "M", "W", "W",…
+$ R_TOTAL_RM &lt;dbl&gt; 10, 17, 20, 14, 5, 8, 14, 14, 4, 9, 7, 7, 5, 5, 15, 14, 11,…
+$ R_HEAT_TYP &lt;chr&gt; "W", "W", "W", "W", "E", "E", "W", "W", "W", "W", "W", "W",…
+$ YR_BUILT   &lt;dbl&gt; 1900, 1910, 1910, 1905, 1860, 1905, 1900, 1890, 1900, 1900,…
+$ Latitude   &lt;dbl&gt; 42.37963, 42.37877, 42.37940, 42.38014, 42.37967, 42.37953,…
+$ Longitude  &lt;dbl&gt; -71.03076, -71.02943, -71.02846, -71.02859, -71.02903, -71.…</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href=""></a><span class="co"># Simple model: Predict price from living area</span></span>
+<span id="cb3-2"><a href=""></a>baseline_model <span class="ot">&lt;-</span> <span class="fu">lm</span>(SalePrice <span class="sc">~</span> LivingArea, <span class="at">data =</span> boston)</span>
+<span id="cb3-3"><a href=""></a><span class="fu">summary</span>(baseline_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+lm(formula = SalePrice ~ LivingArea, data = boston)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-855962 -219491  -68291   55248 9296561 
+
+Coefficients:
+             Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept) 157968.32   35855.59   4.406 1.13e-05 ***
+LivingArea     216.54      14.47  14.969  &lt; 2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 563800 on 1483 degrees of freedom
+Multiple R-squared:  0.1313,    Adjusted R-squared:  0.1307 
+F-statistic: 224.1 on 1 and 1483 DF,  p-value: &lt; 2.2e-16</code></pre>
+</div>
+</div>
+</section>
+<section id="what-does-this-model-tell-us" class="slide level2">
+<h2>What Does This Model Tell Us?</h2>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+lm(formula = SalePrice ~ LivingArea, data = boston)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-855962 -219491  -68291   55248 9296561 
+
+Coefficients:
+             Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept) 157968.32   35855.59   4.406 1.13e-05 ***
+LivingArea     216.54      14.47  14.969  &lt; 2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 563800 on 1483 degrees of freedom
+Multiple R-squared:  0.1313,    Adjusted R-squared:  0.1307 
+F-statistic: 224.1 on 1 and 1483 DF,  p-value: &lt; 2.2e-16</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.1312636</code></pre>
+</div>
+
+</div>
+<img data-src="week6_slides_files/figure-revealjs/unnamed-chunk-2-1.png" width="960" class="r-stretch"></section>
+<section id="interpreting-our-baseline" class="slide level2">
+<h2>Interpreting Our Baseline</h2>
+<p><strong>Expected Output:</strong></p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Variable</th>
+<th>Coefficient</th>
+<th>Std. Error</th>
+<th>t-value</th>
+<th>p-value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Intercept</td>
+<td>157968.32</td>
+<td>35855.59</td>
+<td>4.406</td>
+<td>&lt;0.001</td>
+</tr>
+<tr class="even">
+<td>LivingArea</td>
+<td>216.54</td>
+<td>14.47</td>
+<td>14.969</td>
+<td>&lt;0.001</td>
+</tr>
+</tbody>
+</table>
+<p><strong>What this means:</strong></p>
+<ul>
+<li>Base price (0 sq ft) ≈ 157968.32</li>
+<li>Each additional square foot adds ~216 to price</li>
+<li>Relationship is statistically significant (p &lt; 0.001)</li>
+<li>But R² is only <strong>0.13</strong> (13% of variation explained)</li>
+</ul>
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>The Problem</strong></p>
+</div>
+<div class="callout-content">
+<p><strong>MOST of the variation in house prices is still unexplained!</strong></p>
+<p>What are we missing? 🤔</p>
+</div>
+</div>
+</div>
+</section>
+<section id="limitations-of-this-model" class="slide level2 scrollable">
+<h2>Limitations of This Model</h2>
+<div class="callout callout-warning callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>What’s Missing?</strong></p>
+</div>
+<div class="callout-content">
+<ol type="1">
+<li><strong>What does this model ignore?</strong>
+<ul>
+<li>Location! (North End vs.&nbsp;Roxbury vs.&nbsp;Back Bay)</li>
+<li>Proximity to downtown, waterfront, parks</li>
+<li>Nearby crime levels</li>
+<li>School quality</li>
+<li>Neighborhood characteristics</li>
+</ul></li>
+<li><strong>Why might it fail?</strong>
+<ul>
+<li>1,000 sq ft in Back Bay ≠ 1,000 sq ft in Roxbury</li>
+<li>Same house, different locations → vastly different prices</li>
+<li>“Location, location, location!”</li>
+</ul></li>
+<li><strong>How could we improve it?</strong>
+<ul>
+<li>Add spatial features (crime nearby, distance to amenities)</li>
+<li>Control for neighborhood (fixed effects)</li>
+<li>Include interactions (does size matter more in wealthy areas?)</li>
+</ul></li>
+</ol>
+</div>
+</div>
+</div>
+<p><strong>This is exactly where spatial features come in!</strong></p>
+</section>
+<section id="lets-add-one-more-feature" class="slide level2">
+<h2>Let’s Add One More Feature</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href=""></a><span class="co"># Add number of bathrooms</span></span>
+<span id="cb7-2"><a href=""></a>better_model <span class="ot">&lt;-</span> <span class="fu">lm</span>(SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> R_FULL_BTH, <span class="at">data =</span> boston)</span>
+<span id="cb7-3"><a href=""></a><span class="fu">summary</span>(better_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+lm(formula = SalePrice ~ LivingArea + R_FULL_BTH, data = boston)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-783019 -230756  -65737   75367 9193133 
+
+Coefficients:
+             Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept) 107683.96   37340.88   2.884  0.00399 ** 
+LivingArea     145.68      21.33   6.828 1.25e-11 ***
+R_FULL_BTH  106978.13   23800.30   4.495 7.50e-06 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 560200 on 1482 degrees of freedom
+Multiple R-squared:  0.1429,    Adjusted R-squared:  0.1418 
+F-statistic: 123.6 on 2 and 1482 DF,  p-value: &lt; 2.2e-16</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href=""></a><span class="co"># Compare models</span></span>
+<span id="cb9-2"><a href=""></a><span class="fu">cat</span>(<span class="st">"Baseline R²:"</span>, <span class="fu">summary</span>(baseline_model)<span class="sc">$</span>r.squared, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Baseline R²: 0.1312636 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href=""></a><span class="fu">cat</span>(<span class="st">"With bathrooms R²:"</span>, <span class="fu">summary</span>(better_model)<span class="sc">$</span>r.squared, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>With bathrooms R²: 0.1429474 </code></pre>
+</div>
+</div>
+<p><strong>R² improves a smidge… but still missing location!</strong></p>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Today’s Goal</strong></p>
+</div>
+<div class="callout-content">
+<p>By the end of class, you’ll build models that: - Incorporate spatial relationships - Account for neighborhood effects<br>
+- Achieve much better prediction accuracy - Help you understand what drives housing prices</p>
+</div>
+</div>
+</div>
+</section>
+<section id="converting-to-spatial-data" class="slide level2">
+<h2>Converting to Spatial Data</h2>
+<h3 id="step-1-make-your-data-spatial">Step 1: Make your data spatial</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href=""></a><span class="fu">library</span>(sf)</span>
+<span id="cb13-2"><a href=""></a></span>
+<span id="cb13-3"><a href=""></a><span class="co"># Convert boston data to sf object</span></span>
+<span id="cb13-4"><a href=""></a>boston.sf <span class="ot">&lt;-</span> boston <span class="sc">%&gt;%</span></span>
+<span id="cb13-5"><a href=""></a>  <span class="fu">st_as_sf</span>(<span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"Longitude"</span>, <span class="st">"Latitude"</span>), <span class="at">crs =</span> <span class="dv">4326</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb13-6"><a href=""></a>  <span class="fu">st_transform</span>(<span class="st">'ESRI:102286'</span>)  <span class="co"># MA State Plane (feet)</span></span>
+<span id="cb13-7"><a href=""></a></span>
+<span id="cb13-8"><a href=""></a><span class="co"># Check it worked</span></span>
+<span id="cb13-9"><a href=""></a><span class="fu">head</span>(boston.sf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple feature collection with 6 features and 22 fields
+Geometry type: POINT
+Dimension:     XY
+Bounding box:  xmin: 238643.6 ymin: 903246 xmax: 238833.2 ymax: 903399.5
+Projected CRS: NAD_1983_HARN_StatePlane_Massachusetts_Mainland_FIPS_2001
+# A tibble: 6 × 23
+   ...1 Parcel_No SalePrice PricePerSq LivingArea Style    GROSS_AREA NUM_FLOORS
+  &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;      &lt;dbl&gt;      &lt;dbl&gt; &lt;chr&gt;         &lt;dbl&gt;      &lt;dbl&gt;
+1     1 100032000    450000       229.       1966 "Conven…       3111        2  
+2     2 100058000    600000       164.       3840 "Semi?D…       5603        3  
+3     3 100073000    450000       106.       4246 "Decker"       6010        3  
+4     4 100112000    670000       292.       2295 "Row\xa…       3482        3  
+5     5 100137000    260000       217.       1197 "Coloni…       1785        2  
+6     6 100138000    355000       191.       1859 "Conven…       2198        1.5
+# ℹ 15 more variables: R_BDRMS &lt;dbl&gt;, R_FULL_BTH &lt;dbl&gt;, R_HALF_BTH &lt;dbl&gt;,
+#   R_KITCH &lt;dbl&gt;, R_AC &lt;chr&gt;, R_FPLACE &lt;dbl&gt;, LU &lt;chr&gt;, OWN_OCC &lt;chr&gt;,
+#   R_BLDG_STY &lt;chr&gt;, R_ROOF_TYP &lt;chr&gt;, R_EXT_FIN &lt;chr&gt;, R_TOTAL_RM &lt;dbl&gt;,
+#   R_HEAT_TYP &lt;chr&gt;, YR_BUILT &lt;dbl&gt;, geometry &lt;POINT [m]&gt;</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href=""></a><span class="fu">class</span>(boston.sf)  <span class="co"># Should show "sf" and "data.frame"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "sf"         "tbl_df"     "tbl"        "data.frame"</code></pre>
+</div>
+</div>
+<div class="callout callout-tip callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Why transform CRS?</strong></p>
+</div>
+<div class="callout-content">
+<ul>
+<li><strong>4326</strong> = WGS84 (lat/lon in degrees) - fine for display</li>
+<li><strong>ESRI:102286</strong> = MA State Plane (feet) - good for distance calculations</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+<section id="step-2-spatial-join-with-neighborhoods" class="slide level2">
+<h2>Step 2: Spatial Join with Neighborhoods</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href=""></a><span class="co"># Load neighborhood boundaries</span></span>
+<span id="cb17-2"><a href=""></a>nhoods <span class="ot">&lt;-</span> <span class="fu">read_sf</span>(<span class="fu">here</span>(<span class="st">"data/BPDA_Neighborhood_Boundaries.geojson"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb17-3"><a href=""></a>  <span class="fu">st_transform</span>(<span class="st">'ESRI:102286'</span>)  <span class="co"># Match CRS!</span></span>
+<span id="cb17-4"><a href=""></a></span>
+<span id="cb17-5"><a href=""></a><span class="co"># Check the neighborhoods</span></span>
+<span id="cb17-6"><a href=""></a><span class="fu">head</span>(nhoods)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple feature collection with 6 features and 7 fields
+Geometry type: MULTIPOLYGON
+Dimension:     XY
+Bounding box:  xmin: 229049.1 ymin: 890856 xmax: 236590.9 ymax: 900302.5
+Projected CRS: NAD_1983_HARN_StatePlane_Massachusetts_Mainland_FIPS_2001
+# A tibble: 6 × 8
+  sqmiles name         neighborhood_id  acres SHAPE__Length objectid SHAPE__Area
+    &lt;dbl&gt; &lt;chr&gt;        &lt;chr&gt;            &lt;dbl&gt;         &lt;dbl&gt;    &lt;int&gt;       &lt;dbl&gt;
+1    2.51 Roslindale   15              1606.         53564.       53   69938273.
+2    3.94 Jamaica Pla… 11              2519.         56350.       54  109737890.
+3    0.55 Mission Hill 13               351.         17919.       55   15283120.
+4    0.29 Longwood     28               189.         11909.       56    8215904.
+5    0.04 Bay Village  33                26.5         4651.       57    1156071.
+6    0.02 Leather Dis… 27                15.6         3237.       58     681272.
+# ℹ 1 more variable: geometry &lt;MULTIPOLYGON [m]&gt;</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href=""></a><span class="fu">nrow</span>(nhoods)  <span class="co"># How many neighborhoods?</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 26</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href=""></a><span class="co"># Spatial join: Assign each house to its neighborhood</span></span>
+<span id="cb21-2"><a href=""></a>boston.sf <span class="ot">&lt;-</span> boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb21-3"><a href=""></a>  <span class="fu">st_join</span>(nhoods, <span class="at">join =</span> st_intersects)</span>
+<span id="cb21-4"><a href=""></a></span>
+<span id="cb21-5"><a href=""></a><span class="co"># Check results</span></span>
+<span id="cb21-6"><a href=""></a>boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb21-7"><a href=""></a>  <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb21-8"><a href=""></a>  <span class="fu">count</span>(name) <span class="sc">%&gt;%</span></span>
+<span id="cb21-9"><a href=""></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(n))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 19 × 2
+   name              n
+   &lt;chr&gt;         &lt;int&gt;
+ 1 Dorchester      344
+ 2 West Roxbury    242
+ 3 Hyde Park       152
+ 4 East Boston     149
+ 5 Roslindale      142
+ 6 Jamaica Plain   113
+ 7 South Boston     80
+ 8 Charlestown      65
+ 9 Mattapan         65
+10 Roxbury          63
+11 South End        20
+12 Beacon Hill      17
+13 Mission Hill     14
+14 Allston           6
+15 Brighton          6
+16 Back Bay          3
+17 Fenway            2
+18 Bay Village       1
+19 Downtown          1</code></pre>
+</div>
+</div>
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>What just happened?</strong></p>
+</div>
+<div class="callout-content">
+<p><code>st_join()</code> found which neighborhood polygon contains each house point!</p>
+</div>
+</div>
+</div>
+</section>
+<section id="visualize-prices-by-neighborhood" class="slide level2">
+<h2>Visualize: Prices by Neighborhood</h2>
+
+<img data-src="week6_slides_files/figure-revealjs/unnamed-chunk-6-1.png" width="960" class="r-stretch"></section>
+<section id="the-spatial-pattern-is-clear" class="slide level2">
+<h2>The Spatial Pattern is Clear!</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href=""></a><span class="co"># Which neighborhoods are most expensive?</span></span>
+<span id="cb23-2"><a href=""></a>price_by_nhood <span class="sc">%&gt;%</span></span>
+<span id="cb23-3"><a href=""></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(median_price)) <span class="sc">%&gt;%</span></span>
+<span id="cb23-4"><a href=""></a>  <span class="fu">head</span>(<span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 5 × 3
+  name        median_price n_sales
+  &lt;chr&gt;              &lt;dbl&gt;   &lt;int&gt;
+1 Back Bay         9500000       3
+2 Beacon Hill      2892750      17
+3 South End        2797500      20
+4 Bay Village      2300000       1
+5 Fenway           2112500       2</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href=""></a><span class="co"># Which have most sales?</span></span>
+<span id="cb25-2"><a href=""></a>price_by_nhood <span class="sc">%&gt;%</span></span>
+<span id="cb25-3"><a href=""></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(n_sales)) <span class="sc">%&gt;%</span></span>
+<span id="cb25-4"><a href=""></a>  <span class="fu">head</span>(<span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 5 × 3
+  name         median_price n_sales
+  &lt;chr&gt;               &lt;dbl&gt;   &lt;int&gt;
+1 Dorchester         511250     344
+2 West Roxbury       503750     242
+3 Hyde Park          390000     152
+4 East Boston        463000     149
+5 Roslindale         489500     142</code></pre>
+</div>
+</div>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Discussion Question</strong></p>
+</div>
+<div class="callout-content">
+<p>Why do you think certain neighborhoods command higher prices? - Proximity to downtown? - Historical character? - School quality? - Safety? - All of the above?</p>
+<p><strong>This is why we need spatial features and neighborhood controls!</strong></p>
+</div>
+</div>
+</div>
+</section>
+<section class="slide level2">
+
+</section></section>
+<section>
+<section id="part-1-expanding-your-regression-toolkit" class="title-slide slide level1 center" data-background-color="#667eea">
+<h1>Part 1: Expanding Your Regression Toolkit</h1>
+
+</section>
+<section id="beyond-continuous-variables" class="slide level2">
+<h2>Beyond Continuous Variables</h2>
+<div class="columns">
+<div class="column" style="width:50%;">
+<h3 id="continuous-variables">✅ Continuous Variables</h3>
+<ul>
+<li>Square footage</li>
+<li>Age of house</li>
+<li>Income levels</li>
+<li>Distance to downtown</li>
+</ul>
+</div><div class="column" style="width:50%;">
+<h3 id="categorical-variables">🏷️ Categorical Variables</h3>
+<ul>
+<li>Neighborhood</li>
+<li>School district</li>
+<li>Building type</li>
+<li>Has garage? (Yes/No)</li>
+</ul>
+</div></div>
+</section>
+<section id="dummy-variables" class="slide level2">
+<h2>Dummy Variables</h2>
+<h3 id="our-boston-data-name-variable-from-spatial-join">Our Boston Data: <code>name</code> variable from spatial join</h3>
+<p>Neighborhoods in our dataset (showing just a few):</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 10 × 2
+   name              n
+   &lt;chr&gt;         &lt;int&gt;
+ 1 Dorchester      344
+ 2 West Roxbury    242
+ 3 Hyde Park       152
+ 4 East Boston     149
+ 5 Roslindale      142
+ 6 Jamaica Plain   113
+ 7 South Boston     80
+ 8 Charlestown      65
+ 9 Mattapan         65
+10 Roxbury          63</code></pre>
+</div>
+</div>
+<p><strong>How R Handles This</strong></p>
+<p>When you include <code>name</code> in a model, R automatically creates binary indicators:</p>
+<ul>
+<li><strong>Back_Bay:</strong> 1 if Back Bay, 0 otherwise</li>
+<li><strong>Beacon_Hill:</strong> 1 if Beacon Hill, 0 otherwise</li>
+<li><strong>Charlestown:</strong> 1 if Charlestown, 0 otherwise</li>
+<li>…and so on for all neighborhoods</li>
+</ul>
+<div class="callout callout-warning callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>⚠️ The (n-1) Rule</strong></p>
+</div>
+<div class="callout-content">
+<p>One neighborhood is automatically chosen as the <strong>reference category</strong> (omitted)!</p>
+<p>R picks the first alphabetically unless you specify otherwise.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="add-dummy-categorical-variables-to-the-model" class="slide level2">
+<h2>Add Dummy (Categorical) Variables to the Model</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href=""></a><span class="co"># Ensure name is a factor</span></span>
+<span id="cb28-2"><a href=""></a>boston.sf <span class="ot">&lt;-</span> boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb28-3"><a href=""></a>  <span class="fu">mutate</span>(<span class="at">name =</span> <span class="fu">as.factor</span>(name))</span>
+<span id="cb28-4"><a href=""></a></span>
+<span id="cb28-5"><a href=""></a><span class="co"># Check which is reference (first alphabetically)</span></span>
+<span id="cb28-6"><a href=""></a><span class="fu">levels</span>(boston.sf<span class="sc">$</span>name)[<span class="dv">1</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "Allston"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href=""></a><span class="co"># Fit model with neighborhood fixed effects</span></span>
+<span id="cb30-2"><a href=""></a>model_neighborhoods <span class="ot">&lt;-</span> <span class="fu">lm</span>(SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> name, </span>
+<span id="cb30-3"><a href=""></a>                          <span class="at">data =</span> boston.sf)</span>
+<span id="cb30-4"><a href=""></a></span>
+<span id="cb30-5"><a href=""></a><span class="co"># Show just first 10 coefficients</span></span>
+<span id="cb30-6"><a href=""></a><span class="fu">summary</span>(model_neighborhoods)<span class="sc">$</span>coef[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, ]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                    Estimate   Std. Error    t value      Pr(&gt;|t|)
+(Intercept)      704306.0751 9.022210e+04  7.8063584  1.112892e-14
+LivingArea          138.3206 6.468186e+00 21.3847638  1.605175e-88
+nameBack Bay    7525585.0560 1.533714e+05 49.0677253 1.522921e-311
+nameBay Village 1284057.5326 2.320256e+05  5.5341206  3.700442e-08
+nameBeacon Hill 1767805.2297 1.020211e+05 17.3278366  2.465874e-61
+nameBrighton    -168941.2113 1.239972e+05 -1.3624597  1.732623e-01
+nameCharlestown   -2556.8667 9.208989e+04 -0.0277649  9.778534e-01
+nameDorchester  -576819.4858 8.846990e+04 -6.5199517  9.653393e-11
+nameDowntown      58553.1237 2.322150e+05  0.2521505  8.009601e-01
+nameEast Boston -534060.4110 8.962950e+04 -5.9585340  3.182615e-09</code></pre>
+</div>
+</div>
+</section>
+<section id="interpreting-neighborhood-dummy-variables" class="slide level2">
+<h2>Interpreting Neighborhood Dummy Variables</h2>
+<div class="cell">
+<div class="cell-output-display">
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Variable</th>
+<th style="text-align: right;">Coefficient</th>
+<th style="text-align: right;">p-value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Intercept (Allston)</td>
+<td style="text-align: right;">$649,635</td>
+<td style="text-align: right;">&lt; 0.001***</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Living Area (per sq ft)</td>
+<td style="text-align: right;">$114</td>
+<td style="text-align: right;">&lt; 0.001***</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Back Bay</td>
+<td style="text-align: right;">$7,561,273</td>
+<td style="text-align: right;">&lt; 0.001***</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Beacon Hill</td>
+<td style="text-align: right;">$1,780,861</td>
+<td style="text-align: right;">&lt; 0.001***</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Charlestown</td>
+<td style="text-align: right;">$22,575</td>
+<td style="text-align: right;">0.806</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Dorchester</td>
+<td style="text-align: right;">-$540,267</td>
+<td style="text-align: right;">&lt; 0.001***</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">East Boston</td>
+<td style="text-align: right;">-$515,990</td>
+<td style="text-align: right;">&lt; 0.001***</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Roxbury</td>
+<td style="text-align: right;">-$566,534</td>
+<td style="text-align: right;">&lt; 0.001***</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<h3 id="how-to-read-this-table">How to Read This Table</h3>
+<p><strong>Reference Category:</strong> Allston (automatically chosen - alphabetically first)</p>
+<p><strong>Structural Variables:</strong></p>
+<ul>
+<li><strong>Living Area:</strong> Each additional sq ft adds this amount (same for all neighborhoods)</li>
+<li><strong>Bedrooms:</strong> Effect of one more full bathroom (same for all neighborhoods)</li>
+</ul>
+<p><strong>Neighborhood Dummies:</strong></p>
+<ul>
+<li><strong>Positive coefficient</strong> = This neighborhood is MORE expensive than Allston</li>
+<li><strong>Negative coefficient</strong> = This neighborhood is LESS expensive than Allston</li>
+<li>All else equal (same size, same bathrooms)</li>
+</ul>
+</section>
+<section id="concrete-example-comparing-two-houses" class="slide level2">
+<h2>Concrete Example: Comparing Two Houses</h2>
+<p>Using our model, let’s compare identical houses in different neighborhoods:</p>
+<div class="columns">
+<div class="column" style="width:50%;">
+<h3 id="house-a-back-bay">House A: Back Bay</h3>
+<ul>
+<li>Living Area: 1,500 sq ft</li>
+<li>Baths: 2</li>
+<li><strong>Neighborhood:</strong> Back Bay</li>
+</ul>
+<p><strong>Predicted Price:</strong></p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>           1 
+"$8,458,873" </code></pre>
+</div>
+</div>
+</div><div class="column" style="width:50%;">
+<h3 id="house-b-roxbury">House B: Roxbury</h3>
+<ul>
+<li>Living Area: 1,500 sq ft</li>
+<li>Baths: 2</li>
+<li><strong>Neighborhood:</strong> Roxbury</li>
+</ul>
+<p><strong>Predicted Price:</strong></p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>         1 
+"$331,066" </code></pre>
+</div>
+</div>
+</div></div>
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Important</strong></p>
+</div>
+<div class="callout-content">
+<p>The Neighborhood Effect Price Difference</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>           1 
+"$8,127,807" </code></pre>
+</div>
+</div>
+<p>Same house, different location = huge price difference! This is what the neighborhood dummies capture.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="interaction-effects-when-relationships-depend" class="slide level2">
+<h2>Interaction Effects: When Relationships Depend</h2>
+<h3 id="the-question">The Question</h3>
+<p>Does the effect of one variable <strong>depend on</strong> the level of another variable?</p>
+<h3 id="example-scenarios">Example Scenarios</h3>
+<ul>
+<li><strong>Housing:</strong> Does square footage matter more in wealthy neighborhoods?</li>
+<li><strong>Education:</strong> Do tutoring effects vary by initial skill level?</li>
+<li><strong>Public Health:</strong> Do pollution effects differ by age?</li>
+</ul>
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Mathematical Form</strong></p>
+</div>
+<div class="callout-content">
+<p>SalePrice = β₀ + β₁(LivingArea) + β₂(WealthyNeighborhood) + <strong>β₃(LivingArea × WealthyNeighborhood)</strong> + ε</p>
+</div>
+</div>
+</div>
+<p><strong>Today’s example:</strong> Is the value of square footage the same across all Boston neighborhoods?</p>
+</section>
+<section id="theory-luxury-premium-hypothesis" class="slide level2">
+<h2>Theory: Luxury Premium Hypothesis</h2>
+<div class="columns">
+<div class="column" style="width:50%;">
+<h3 id="in-wealthy-neighborhoods">🏛️ In Wealthy Neighborhoods</h3>
+<p>(Back Bay, Beacon Hill, South End)</p>
+<ul>
+<li>High-end buyers pay premium for space</li>
+<li>Luxury finishes, location prestige</li>
+<li>Each sq ft adds substantial value</li>
+<li><strong>Steep slope</strong></li>
+</ul>
+<p><strong>Hypothesis:</strong> $300+ per sq ft</p>
+</div><div class="column" style="width:50%;">
+<h3 id="in-working-class-neighborhoods">🏘️ In Working-Class Neighborhoods</h3>
+<p>(Dorchester, Mattapan, East Boston)</p>
+<ul>
+<li>Buyers value function over luxury</li>
+<li>More price-sensitive market</li>
+<li>Space matters, but less premium</li>
+<li><strong>Flatter slope</strong></li>
+</ul>
+<p><strong>Hypothesis:</strong> $100-150 per sq ft</p>
+</div></div>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>The Key Question</strong></p>
+</div>
+<div class="callout-content">
+<p>If we assume one slope for all neighborhoods, are we misunderstanding the market?</p>
+</div>
+</div>
+</div>
+</section>
+<section id="create-the-neighborhood-categories" class="slide level2">
+<h2>Create the Neighborhood Categories</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href=""></a><span class="co"># Define wealthy neighborhoods based on median prices</span></span>
+<span id="cb35-2"><a href=""></a>wealthy_hoods <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Back Bay"</span>, <span class="st">"Beacon Hill"</span>, <span class="st">"South End"</span>, <span class="st">"Bay Village"</span>)</span>
+<span id="cb35-3"><a href=""></a></span>
+<span id="cb35-4"><a href=""></a><span class="co"># Create binary indicator</span></span>
+<span id="cb35-5"><a href=""></a>boston.sf <span class="ot">&lt;-</span> boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb35-6"><a href=""></a>  <span class="fu">mutate</span>(</span>
+<span id="cb35-7"><a href=""></a>    <span class="at">wealthy_neighborhood =</span> <span class="fu">ifelse</span>(name <span class="sc">%in%</span> wealthy_hoods, <span class="st">"Wealthy"</span>, <span class="st">"Not Wealthy"</span>),</span>
+<span id="cb35-8"><a href=""></a>    <span class="at">wealthy_neighborhood =</span> <span class="fu">as.factor</span>(wealthy_neighborhood)</span>
+<span id="cb35-9"><a href=""></a>  )</span>
+<span id="cb35-10"><a href=""></a></span>
+<span id="cb35-11"><a href=""></a><span class="co"># Check the split</span></span>
+<span id="cb35-12"><a href=""></a>boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb35-13"><a href=""></a>  <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb35-14"><a href=""></a>  <span class="fu">count</span>(wealthy_neighborhood)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 2 × 2
+  wealthy_neighborhood     n
+  &lt;fct&gt;                &lt;int&gt;
+1 Not Wealthy           1444
+2 Wealthy                 41</code></pre>
+</div>
+</div>
+</section>
+<section id="model-1-no-interaction-parallel-slopes" class="slide level2">
+<h2>Model 1: No Interaction (Parallel Slopes)</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href=""></a><span class="co"># Model assumes same slope everywhere</span></span>
+<span id="cb37-2"><a href=""></a>model_no_interact <span class="ot">&lt;-</span> <span class="fu">lm</span>(SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> wealthy_neighborhood, </span>
+<span id="cb37-3"><a href=""></a>                        <span class="at">data =</span> boston.sf)</span>
+<span id="cb37-4"><a href=""></a></span>
+<span id="cb37-5"><a href=""></a><span class="fu">summary</span>(model_no_interact)<span class="sc">$</span>coef</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                                Estimate   Std. Error   t value      Pr(&gt;|t|)
+(Intercept)                  213842.7642 23893.619394  8.949785  1.039392e-18
+LivingArea                      160.2357     9.713346 16.496442  2.936087e-56
+wealthy_neighborhoodWealthy 2591012.0471 59958.794614 43.213211 1.103579e-264</code></pre>
+</div>
+</div>
+<div class="callout callout-warning callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Warning</strong></p>
+</div>
+<div class="callout-content">
+<p>What This Assumes</p>
+<p>Living area has the same effect in all neighborhoods Only the intercept differs (wealthy areas start higher) Parallel lines on a plot</p>
+</div>
+</div>
+</div>
+</section>
+<section id="model-2-with-interaction-different-slopes" class="slide level2">
+<h2>Model 2: With Interaction (Different Slopes)</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href=""></a><span class="co"># Model allows different slopes</span></span>
+<span id="cb39-2"><a href=""></a>model_interact <span class="ot">&lt;-</span> <span class="fu">lm</span>(SalePrice <span class="sc">~</span> LivingArea <span class="sc">*</span> wealthy_neighborhood, </span>
+<span id="cb39-3"><a href=""></a>                     <span class="at">data =</span> boston.sf)</span>
+<span id="cb39-4"><a href=""></a></span>
+<span id="cb39-5"><a href=""></a><span class="fu">summary</span>(model_interact)<span class="sc">$</span>coef</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                                            Estimate   Std. Error   t value
+(Intercept)                             358542.41696 1.863997e+04 19.235144
+LivingArea                                  95.63947 7.620382e+00 12.550483
+wealthy_neighborhoodWealthy            -377937.38372 1.005554e+05 -3.758498
+LivingArea:wealthy_neighborhoodWealthy     985.12500 2.975904e+01 33.103383
+                                            Pr(&gt;|t|)
+(Intercept)                             8.875710e-74
+LivingArea                              2.079700e-34
+wealthy_neighborhoodWealthy             1.775774e-04
+LivingArea:wealthy_neighborhoodWealthy 2.445570e-180</code></pre>
+</div>
+</div>
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Important</strong></p>
+</div>
+<div class="callout-content">
+<p>What This Allows</p>
+<p>Living area can have different effects in different neighborhoods Both intercept AND slope differ Non-parallel lines on a plot</p>
+</div>
+</div>
+</div>
+</section>
+<section id="interpreting-the-interaction-coefficients" class="slide level2">
+<h2>Interpreting the Interaction Coefficients</h2>
+<div class="cell">
+<div class="cell-output-display">
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Term</th>
+<th style="text-align: right;">Coefficient</th>
+<th style="text-align: right;">t-value</th>
+<th style="text-align: right;">p-value</th>
+<th style="text-align: center;">Sig</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Intercept (Not Wealthy)</td>
+<td style="text-align: right;">$358,542</td>
+<td style="text-align: right;">19.235</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: center;">***</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Living Area (Not Wealthy)</td>
+<td style="text-align: right;">$96</td>
+<td style="text-align: right;">12.550</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: center;">***</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Wealthy Neighborhood Premium</td>
+<td style="text-align: right;">-$377,937</td>
+<td style="text-align: right;">-3.758</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: center;">***</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Extra $/sq ft in Wealthy Areas</td>
+<td style="text-align: right;">$985</td>
+<td style="text-align: right;">33.103</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: center;">***</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p><em>We get the un-intuitive negative premium here because that is an intercept adjustment (applies at 0 sqft). The slope difference (+985sq/ft) is huge - we can calculate when wealthy areas become more expensive (at what sq ft) = 384.</em></p>
+</section>
+<section id="breaking-down-the-coefficients" class="slide level2">
+<h2>Breaking Down the Coefficients</h2>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p>🏘️ Not Wealthy Areas Equation: Price = $358,542 + $96 × LivingArea Interpretation:</p>
+<p>Base price: $358,542 Each sq ft adds: $96</p>
+</div><div class="column" style="width:50%;">
+<p>🏛️ Wealthy Areas Equation: Price = -$19,395 + $1,081 × LivingArea Interpretation:</p>
+<p>Base price: -$19,395 Each sq ft adds: $1,081</p>
+</div></div>
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Important</strong></p>
+</div>
+<div class="callout-content">
+<p>The Interaction Effect Wealthy areas value each sq ft $985 more than non-wealthy areas!</p>
+</div>
+</div>
+</div>
+</section>
+<section id="visualizing-the-interaction-effect" class="slide level2">
+<h2>Visualizing the Interaction Effect</h2>
+
+<img data-src="week6_slides_files/figure-revealjs/unnamed-chunk-21-1.png" width="960" class="r-stretch"><p>Key Observation: The lines are NOT parallel - that’s the interaction!</p>
+</section>
+<section id="compare-model-performance" class="slide level2">
+<h2>Compare Model Performance</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href=""></a><span class="co"># Compare R-squared</span></span>
+<span id="cb41-2"><a href=""></a><span class="fu">cat</span>(<span class="st">"Model WITHOUT interaction R²:"</span>, <span class="fu">round</span>(<span class="fu">summary</span>(model_no_interact)<span class="sc">$</span>r.squared, <span class="dv">4</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Model WITHOUT interaction R²: 0.6156 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href=""></a><span class="fu">cat</span>(<span class="st">"Model WITH interaction R²:"</span>, <span class="fu">round</span>(<span class="fu">summary</span>(model_interact)<span class="sc">$</span>r.squared, <span class="dv">4</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Model WITH interaction R²: 0.7791 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href=""></a><span class="fu">cat</span>(<span class="st">"Improvement:"</span>, <span class="fu">round</span>(<span class="fu">summary</span>(model_interact)<span class="sc">$</span>r.squared <span class="sc">-</span> <span class="fu">summary</span>(model_no_interact)<span class="sc">$</span>r.squared, <span class="dv">4</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Improvement: 0.1635 </code></pre>
+</div>
+</div>
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Important</strong></p>
+</div>
+<div class="callout-content">
+<p>Model Improvement Adding the interaction improves R² by 0.1635 (a 26.6% relative improvement)</p>
+<p>Interpretation: We explain 16.35% more variation in prices by allowing different slopes!</p>
+</div>
+</div>
+</div>
+</section>
+<section id="policy-implications" class="slide level2 scrollable">
+<h2>Policy Implications</h2>
+<div class="callout callout-warning callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>What This Tells Us About Boston’s Housing Market</strong></p>
+</div>
+<div class="callout-content">
+<ol type="1">
+<li>Market Segmentation: Boston operates as TWO distinct housing markets</li>
+</ol>
+<ul>
+<li>Luxury market: Every sq ft is premium ($1081/sq ft)</li>
+<li>Standard market: Space valued, but lower premium ($96/sq ft)</li>
+</ul>
+<ol start="2" type="1">
+<li>Affordability Crisis: The interaction amplifies inequality</li>
+</ol>
+<ul>
+<li>Large homes in wealthy areas become exponentially more expensive</li>
+<li>Creates barriers to mobility between neighborhoods</li>
+</ul>
+<ol start="3" type="1">
+<li>Policy Design: One-size-fits-all policies may fail</li>
+</ol>
+<ul>
+<li>Property tax assessments should account for neighborhood-specific valuation</li>
+<li>Housing assistance needs vary dramatically by area</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+<section id="when-not-to-use-interactions" class="slide level2">
+<h2>When Not To Use Interactions</h2>
+<div class="callout callout-warning callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Warning</strong></p>
+</div>
+<div class="callout-content">
+<p>When NOT to Use Interactions:</p>
+<ul>
+<li>Small samples: Need sufficient data in each group</li>
+<li>Overfitting: Too many interactions make models unstable</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+<section id="polynomial-terms-non-linear-relationships" class="slide level2">
+<h2>Polynomial Terms: Non-Linear Relationships</h2>
+<h3 id="when-straight-lines-dont-fit">When Straight Lines Don’t Fit</h3>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p><strong>Signs of Non-Linearity:</strong></p>
+<ul>
+<li>Curved residual plots</li>
+<li>Diminishing returns</li>
+<li>Accelerating effects</li>
+<li>U-shaped or inverted-U patterns</li>
+<li>Theoretical reasons</li>
+</ul>
+</div><div class="column" style="width:50%;">
+<p><strong>Examples:</strong></p>
+<ul>
+<li>House age: depreciation then vintage premium</li>
+<li>Test scores: plateau after studying</li>
+<li>Advertising: diminishing returns</li>
+<li>Crime prevention: early gains, then plateaus</li>
+</ul>
+</div></div>
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Polynomial Regression</strong></p>
+</div>
+<div class="callout-content">
+<p>SalePrice = β₀ + β₁(Age) + β₂(Age²) + ε</p>
+<p>This allows for a <strong>curved relationship</strong></p>
+</div>
+</div>
+</div>
+</section>
+<section id="theory-the-u-shaped-age-effect" class="slide level2">
+<h2>Theory: The U-Shaped Age Effect</h2>
+<h3 id="why-would-age-have-a-non-linear-effect">Why Would Age Have a Non-Linear Effect?</h3>
+<div class="columns">
+<div class="column" style="width:33%;">
+<h3 id="new-houses">🏗️ New Houses</h3>
+<p>(0-20 years)</p>
+<ul>
+<li>Modern amenities</li>
+<li>Move-in ready</li>
+<li>No repairs needed</li>
+<li><strong>High value</strong></li>
+<li>Steep depreciation initially</li>
+</ul>
+</div><div class="column" style="width:33%;">
+<h3 id="middle-aged">🏠 Middle-Aged</h3>
+<p>(20-80 years)</p>
+<ul>
+<li>Needs updates</li>
+<li>Wear and tear</li>
+<li>Not yet “historic”</li>
+<li><strong>Lowest value</strong></li>
+<li>Trough of the curve</li>
+</ul>
+</div><div class="column" style="width:33%;">
+<h3 id="historicvintage">🏛️ Historic/Vintage</h3>
+<p>(80+ years)</p>
+<ul>
+<li>Architectural character</li>
+<li>Historic districts</li>
+<li>Prestige value</li>
+<li><strong>Rising value</strong></li>
+<li>“Vintage premium”</li>
+</ul>
+</div></div>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Boston Context</strong></p>
+</div>
+<div class="callout-content">
+<p>Boston has LOTS of historic homes (Back Bay, Beacon Hill built 1850s-1900s). Does age create a U-shaped curve?</p>
+</div>
+</div>
+</div>
+</section>
+<section id="create-age-variable" class="slide level2">
+<h2>Create Age Variable</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href=""></a><span class="co"># Calculate age from year built</span></span>
+<span id="cb47-2"><a href=""></a>boston.sf <span class="ot">&lt;-</span> boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb47-3"><a href=""></a>  <span class="fu">mutate</span>(<span class="at">Age =</span> <span class="dv">2025</span> <span class="sc">-</span> YR_BUILT)<span class="sc">%&gt;%</span> <span class="fu">filter</span>(Age <span class="sc">&lt;</span><span class="dv">2000</span>)</span>
+<span id="cb47-4"><a href=""></a></span>
+<span id="cb47-5"><a href=""></a></span>
+<span id="cb47-6"><a href=""></a><span class="co"># Check the distribution of age</span></span>
+<span id="cb47-7"><a href=""></a><span class="fu">summary</span>(boston.sf<span class="sc">$</span>Age)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   12.0    95.0   115.0   108.1   125.0   223.0 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href=""></a><span class="co"># Visualize age distribution</span></span>
+<span id="cb49-2"><a href=""></a><span class="fu">ggplot</span>(boston.sf, <span class="fu">aes</span>(<span class="at">x =</span> Age)) <span class="sc">+</span></span>
+<span id="cb49-3"><a href=""></a>  <span class="fu">geom_histogram</span>(<span class="at">bins =</span> <span class="dv">30</span>, <span class="at">fill =</span> <span class="st">"steelblue"</span>, <span class="at">alpha =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
+<span id="cb49-4"><a href=""></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Distribution of House Age in Boston"</span>,</span>
+<span id="cb49-5"><a href=""></a>       <span class="at">x =</span> <span class="st">"Age (years)"</span>,</span>
+<span id="cb49-6"><a href=""></a>       <span class="at">y =</span> <span class="st">"Count"</span>) <span class="sc">+</span></span>
+<span id="cb49-7"><a href=""></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+
+</div>
+<img data-src="week6_slides_files/figure-revealjs/unnamed-chunk-24-1.png" width="960" class="r-stretch"></section>
+<section id="first-linear-model-baseline" class="slide level2">
+<h2>First: Linear Model (Baseline)</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href=""></a><span class="co"># Simple linear relationship</span></span>
+<span id="cb50-2"><a href=""></a>model_age_linear <span class="ot">&lt;-</span> <span class="fu">lm</span>(SalePrice <span class="sc">~</span> Age <span class="sc">+</span> LivingArea, <span class="at">data =</span> boston.sf)</span>
+<span id="cb50-3"><a href=""></a></span>
+<span id="cb50-4"><a href=""></a><span class="fu">summary</span>(model_age_linear)<span class="sc">$</span>coef</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                Estimate  Std. Error   t value     Pr(&gt;|t|)
+(Intercept) -120808.8738 57836.98918 -2.088782 3.689911e-02
+Age            2834.0198   497.72013  5.694003 1.496246e-08
+LivingArea      202.8312    15.10373 13.429214 7.228187e-39</code></pre>
+</div>
+</div>
+<p>Interpretation: Each additional year of age changes price by $2834.01 (assumed constant rate)</p>
+</section>
+<section id="visualize-is-the-relationship-linear" class="slide level2">
+<h2>Visualize: Is the relationship Linear?</h2>
+
+<img data-src="week6_slides_files/figure-revealjs/unnamed-chunk-26-1.png" width="960" class="r-stretch"></section>
+<section id="add-polynomial-term-age-squared" class="slide level2">
+<h2>Add Polynomial Term: Age Squared</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href=""></a><span class="co"># Quadratic model (Age²)</span></span>
+<span id="cb52-2"><a href=""></a>model_age_quad <span class="ot">&lt;-</span> <span class="fu">lm</span>(SalePrice <span class="sc">~</span> Age <span class="sc">+</span> <span class="fu">I</span>(Age<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> LivingArea, <span class="at">data =</span> boston.sf)</span>
+<span id="cb52-3"><a href=""></a></span>
+<span id="cb52-4"><a href=""></a><span class="fu">summary</span>(model_age_quad)<span class="sc">$</span>coef</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                Estimate   Std. Error   t value     Pr(&gt;|t|)
+(Intercept) 570397.14406 97894.237962  5.826667 6.938345e-09
+Age         -13007.51918  1896.446156 -6.858892 1.019524e-11
+I(Age^2)        80.88988     9.360652  8.641479 1.425208e-17
+LivingArea     203.75007    14.739041 13.823835 5.975020e-41</code></pre>
+</div>
+</div>
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Important</strong></p>
+</div>
+<div class="callout-content">
+<p>The I() Function Why I(Age^2) instead of just Age^2? In R formulas, ^ has special meaning. I() tells R: “interpret this literally, compute Age²” Without I(): R would interpret it differently in the formula</p>
+</div>
+</div>
+</div>
+</section>
+<section id="interpreting-polynomial-coefficients" class="slide level2">
+<h2>Interpreting Polynomial Coefficients</h2>
+<p>Model equation: Price = $570,397 + -$13,008×Age + $80×Age² + $204×LivingArea</p>
+<div class="callout callout-warning callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Warning</strong></p>
+</div>
+<div class="callout-content">
+<p>⚠️ Can’t Interpret Coefficients Directly!</p>
+<p>With Age², the effect of age is no longer constant. You need to calculate the marginal effect. Marginal effect of Age = β₁ + 2×β₂×Age This means the effect changes at every age!</p>
+</div>
+</div>
+</div>
+</section>
+<section id="compare-model-performance-1" class="slide level2">
+<h2>Compare Model Performance</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href=""></a><span class="co"># R-squared comparison</span></span>
+<span id="cb54-2"><a href=""></a>r2_linear <span class="ot">&lt;-</span> <span class="fu">summary</span>(model_age_linear)<span class="sc">$</span>r.squared</span>
+<span id="cb54-3"><a href=""></a>r2_quad <span class="ot">&lt;-</span> <span class="fu">summary</span>(model_age_quad)<span class="sc">$</span>r.squared</span>
+<span id="cb54-4"><a href=""></a></span>
+<span id="cb54-5"><a href=""></a><span class="fu">cat</span>(<span class="st">"Linear model R²:"</span>, <span class="fu">round</span>(r2_linear, <span class="dv">4</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Linear model R²: 0.1549 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href=""></a><span class="fu">cat</span>(<span class="st">"Quadratic model R²:"</span>, <span class="fu">round</span>(r2_quad, <span class="dv">4</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Quadratic model R²: 0.1959 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href=""></a><span class="fu">cat</span>(<span class="st">"Improvement:"</span>, <span class="fu">round</span>(r2_quad <span class="sc">-</span> r2_linear, <span class="dv">4</span>), <span class="st">"</span><span class="sc">\n\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Improvement: 0.0409 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href=""></a><span class="co"># F-test: Is the Age² term significant?</span></span>
+<span id="cb60-2"><a href=""></a><span class="fu">anova</span>(model_age_linear, model_age_quad)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Analysis of Variance Table
+
+Model 1: SalePrice ~ Age + LivingArea
+Model 2: SalePrice ~ Age + I(Age^2) + LivingArea
+  Res.Df        RSS Df  Sum of Sq      F    Pr(&gt;F)    
+1   1469 4.5786e+14                                   
+2   1468 4.3569e+14  1 2.2163e+13 74.675 &lt; 2.2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+</div>
+</section>
+<section id="check-residual-plot" class="slide level2">
+<h2>Check Residual Plot</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href=""></a><span class="co"># Compare residual plots</span></span>
+<span id="cb62-2"><a href=""></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>))</span>
+<span id="cb62-3"><a href=""></a></span>
+<span id="cb62-4"><a href=""></a><span class="co"># Linear model residuals</span></span>
+<span id="cb62-5"><a href=""></a><span class="fu">plot</span>(<span class="fu">fitted</span>(model_age_linear), <span class="fu">residuals</span>(model_age_linear),</span>
+<span id="cb62-6"><a href=""></a>     <span class="at">main =</span> <span class="st">"Linear Model Residuals"</span>,</span>
+<span id="cb62-7"><a href=""></a>     <span class="at">xlab =</span> <span class="st">"Fitted Values"</span>, <span class="at">ylab =</span> <span class="st">"Residuals"</span>)</span>
+<span id="cb62-8"><a href=""></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">col =</span> <span class="st">"red"</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb62-9"><a href=""></a></span>
+<span id="cb62-10"><a href=""></a><span class="co"># Quadratic model residuals  </span></span>
+<span id="cb62-11"><a href=""></a><span class="fu">plot</span>(<span class="fu">fitted</span>(model_age_quad), <span class="fu">residuals</span>(model_age_quad),</span>
+<span id="cb62-12"><a href=""></a>     <span class="at">main =</span> <span class="st">"Quadratic Model Residuals"</span>,</span>
+<span id="cb62-13"><a href=""></a>     <span class="at">xlab =</span> <span class="st">"Fitted Values"</span>, <span class="at">ylab =</span> <span class="st">"Residuals"</span>)</span>
+<span id="cb62-14"><a href=""></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">col =</span> <span class="st">"red"</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+
+</div>
+<img data-src="week6_slides_files/figure-revealjs/unnamed-chunk-30-1.png" width="960" class="r-stretch"></section>
+<section class="slide level2">
+
+</section></section>
+<section>
+<section id="part-3-creating-spatial-features" class="title-slide slide level1 center" data-background-color="#667eea">
+<h1>Part 3: Creating Spatial Features</h1>
+
+</section>
+<section id="why-space-matters-for-housing-prices" class="slide level2">
+<h2>Why Space Matters for Housing Prices</h2>
+<h3 id="toblers-first-law-of-geography">Tobler’s First Law of Geography</h3>
+<div class="callout callout-note no-icon callout-titled callout-style-simple">
+<div class="callout-body">
+<div class="callout-title">
+<p><strong>“Everything is related to everything else, but near things are more related than distant things”</strong></p>
+</div>
+<div class="callout-content">
+<p><em>- Waldo Tobler, 1970</em></p>
+</div>
+</div>
+</div>
+<h3 id="what-this-means-for-house-prices">What This Means for House Prices</h3>
+<ul>
+<li>Crime <strong>nearby</strong> matters more than crime across the city</li>
+<li>Parks <strong>within walking distance</strong> affect value</li>
+<li>Your <strong>immediate neighborhood</strong> defines your market</li>
+</ul>
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>The Challenge</strong></p>
+</div>
+<div class="callout-content">
+<p>How do we quantify “nearbyness” in a way our regression model can use?</p>
+<p><strong>Answer:</strong> Create spatial features that measure proximity to amenities/disamenities</p>
+</div>
+</div>
+</div>
+</section>
+<section id="three-approaches-to-spatial-features" class="slide level2">
+<h2>Three Approaches to Spatial Features</h2>
+<h3 id="buffer-aggregation">1️⃣ Buffer Aggregation</h3>
+<p><strong>Count or sum</strong> events within a defined distance</p>
+<p><em>Example: Number of crimes within 500 feet</em></p>
+<h3 id="k-nearest-neighbors-knn">2️⃣ k-Nearest Neighbors (kNN)</h3>
+<p><strong>Average distance</strong> to k closest events</p>
+<p><em>Example: Average distance to 3 nearest violent crimes</em></p>
+<h3 id="distance-to-specific-points">3️⃣ Distance to Specific Points</h3>
+<p><strong>Straight-line distance</strong> to important locations</p>
+<p><em>Example: Distance to downtown, nearest T station</em></p>
+<div class="callout callout-tip callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Tip</strong></p>
+</div>
+<div class="callout-content">
+<p><strong>Today:</strong> We’ll create all three types using Boston crime data!</p>
+</div>
+</div>
+</div>
+</section>
+<section id="load-and-prepare-crime-data" class="slide level2">
+<h2>Load and Prepare Crime Data</h2>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>Rows: 200,977
+Columns: 21
+$ ...1                &lt;dbl&gt; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,…
+$ STREET              &lt;chr&gt; "ALBERT ST", "ALBERT ST", "L ST", "HAROLD ST", "BL…
+$ OFFENSE_DESCRIPTION &lt;chr&gt; "DRUGS - POSS CLASS B - INTENT TO MFR DIST DISP", …
+$ SHOOTING            &lt;chr&gt; NA, NA, NA, "Y", NA, NA, NA, NA, NA, NA, NA, NA, N…
+$ OFFENSE_CODE        &lt;dbl&gt; 1843, 1841, 2900, 413, 3111, 2900, 3402, 1841, 311…
+$ DISTRICT            &lt;chr&gt; "B2", "B2", "C6", "B2", "B3", "B3", "A1", "D4", "E…
+$ REPORTING_AREA      &lt;dbl&gt; NA, NA, 230, 314, 465, 406, 76, 270, 499, 356, 170…
+$ OCCURRED_ON_DATE    &lt;dttm&gt; 2015-08-01 23:07:00, 2015-08-01 23:07:00, 2015-08…
+$ DAY_OF_WEEK         &lt;chr&gt; "Saturday", "Saturday", "Saturday", "Saturday", "S…
+$ MONTH               &lt;dbl&gt; 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,…
+$ HOUR                &lt;dbl&gt; 23, 23, 8, 18, 1, 1, 1, 17, 15, 13, 19, 12, 1, 1, …
+$ X_full_count        &lt;dbl&gt; 273, 273, 273, 273, 273, 273, 273, 273, 273, 273, …
+$ Long                &lt;dbl&gt; NA, NA, -71.03529, -71.09072, -71.09104, -71.07442…
+$ YEAR                &lt;dbl&gt; 2015, 2015, 2015, 2015, 2015, 2015, 2015, 2015, 20…
+$ Lat                 &lt;dbl&gt; NA, NA, 42.33271, 42.31532, 42.28582, 42.27130, 42…
+$ INCIDENT_NUMBER     &lt;chr&gt; "I152063654", "I152063654", "I152063493", "I152063…
+$ rank                &lt;dbl&gt; 0.314183, 0.314366, 0.314974, 0.315240, 0.315467, …
+$ X_id                &lt;dbl&gt; 243806, 243805, 243949, 243858, 244025, 244015, 24…
+$ OFFENSE_CODE_GROUP  &lt;chr&gt; "Drug Violation", "Drug Violation", "Other", "Aggr…
+$ UCR_PART            &lt;chr&gt; "Part Two", "Part Two", "Part Two", "Part One", "P…
+$ Location            &lt;chr&gt; "(0.00000000, 0.00000000)", "(0.00000000, 0.000000…</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Reading layer `BPDA_Neighborhood_Boundaries' from data source 
+  `/Users/delmelle/Documents/MUSA-5080-Fall-2025/lectures/week-06/data/BPDA_Neighborhood_Boundaries.geojson' 
+  using driver `GeoJSON'
+Simple feature collection with 26 features and 7 fields
+Geometry type: MULTIPOLYGON
+Dimension:     XY
+Bounding box:  xmin: -71.19125 ymin: 42.22792 xmax: -70.92278 ymax: 42.39699
+Geodetic CRS:  WGS 84</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    xmin     ymin     xmax     ymax 
+227125.8 886966.0 241483.7 904797.2 </code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    xmin     ymin     xmax     ymax 
+226505.0 887148.3 241435.5 904894.0 </code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    xmin     ymin     xmax     ymax 
+225465.6 886449.8 247575.8 905284.0 </code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Records with missing coordinates: 10103 </code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Violent crime records: 39854 </code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 9 × 2
+  OFFENSE_CODE_GROUP             n
+  &lt;chr&gt;                      &lt;int&gt;
+1 Larceny                    16485
+2 Larceny From Motor Vehicle  7899
+3 Aggravated Assault          4618
+4 Residential Burglary        4263
+5 Robbery                     3083
+6 Auto Theft                  2380
+7 Commercial Burglary          754
+8 Other Burglary               286
+9 Homicide                      86</code></pre>
+</div>
+</div>
+</section>
+<section id="visaulize-crime-locations" class="slide level2">
+<h2>Visaulize: Crime Locations</h2>
+
+<img data-src="week6_slides_files/figure-revealjs/unnamed-chunk-32-1.png" width="960" class="r-stretch"></section>
+<section id="approach-1-buffer-aggregation" class="slide level2">
+<h2>Approach 1: Buffer Aggregation</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb71"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href=""></a><span class="co"># Create buffer features - these will work now that CRS is correct</span></span>
+<span id="cb71-2"><a href=""></a>boston.sf <span class="ot">&lt;-</span> boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb71-3"><a href=""></a>  <span class="fu">mutate</span>(</span>
+<span id="cb71-4"><a href=""></a>    <span class="at">crimes.Buffer =</span> <span class="fu">lengths</span>(<span class="fu">st_intersects</span>(</span>
+<span id="cb71-5"><a href=""></a>      <span class="fu">st_buffer</span>(geometry, <span class="dv">660</span>),</span>
+<span id="cb71-6"><a href=""></a>      crimes.sf</span>
+<span id="cb71-7"><a href=""></a>    )),</span>
+<span id="cb71-8"><a href=""></a>    <span class="at">crimes_500ft =</span> <span class="fu">lengths</span>(<span class="fu">st_intersects</span>(</span>
+<span id="cb71-9"><a href=""></a>      <span class="fu">st_buffer</span>(geometry, <span class="dv">500</span>),</span>
+<span id="cb71-10"><a href=""></a>      crimes.sf</span>
+<span id="cb71-11"><a href=""></a>    ))</span>
+<span id="cb71-12"><a href=""></a>  )</span>
+<span id="cb71-13"><a href=""></a></span>
+<span id="cb71-14"><a href=""></a><span class="co"># Check it worked</span></span>
+<span id="cb71-15"><a href=""></a><span class="co">#summary(boston.sf$crimes.Buffer)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+
+<img data-src="week6_slides_files/figure-revealjs/unnamed-chunk-34-1.png" width="960" class="r-stretch"></section>
+<section id="approach-2-k-nearest-neighborhoods-method" class="slide level2">
+<h2>Approach 2: k-Nearest Neighborhoods Method</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb72-1"><a href=""></a><span class="co"># Calculate distance matrix (houses to crimes)</span></span>
+<span id="cb72-2"><a href=""></a>dist_matrix <span class="ot">&lt;-</span> <span class="fu">st_distance</span>(boston.sf, crimes.sf)</span>
+<span id="cb72-3"><a href=""></a></span>
+<span id="cb72-4"><a href=""></a><span class="co"># Function to get mean distance to k nearest neighbors</span></span>
+<span id="cb72-5"><a href=""></a>get_knn_distance <span class="ot">&lt;-</span> <span class="cf">function</span>(dist_matrix, k) {</span>
+<span id="cb72-6"><a href=""></a>  <span class="fu">apply</span>(dist_matrix, <span class="dv">1</span>, <span class="cf">function</span>(distances) {</span>
+<span id="cb72-7"><a href=""></a>    <span class="co"># Sort and take first k, then average</span></span>
+<span id="cb72-8"><a href=""></a>    <span class="fu">mean</span>(<span class="fu">as.numeric</span>(<span class="fu">sort</span>(distances)[<span class="dv">1</span><span class="sc">:</span>k]))</span>
+<span id="cb72-9"><a href=""></a>  })</span>
+<span id="cb72-10"><a href=""></a>}</span>
+<span id="cb72-11"><a href=""></a></span>
+<span id="cb72-12"><a href=""></a><span class="co"># Create multiple kNN features</span></span>
+<span id="cb72-13"><a href=""></a>boston.sf <span class="ot">&lt;-</span> boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb72-14"><a href=""></a>  <span class="fu">mutate</span>(</span>
+<span id="cb72-15"><a href=""></a>    <span class="at">crime_nn1 =</span> <span class="fu">get_knn_distance</span>(dist_matrix, <span class="at">k =</span> <span class="dv">1</span>),</span>
+<span id="cb72-16"><a href=""></a>    <span class="at">crime_nn3 =</span> <span class="fu">get_knn_distance</span>(dist_matrix, <span class="at">k =</span> <span class="dv">3</span>),</span>
+<span id="cb72-17"><a href=""></a>    <span class="at">crime_nn5 =</span> <span class="fu">get_knn_distance</span>(dist_matrix, <span class="at">k =</span> <span class="dv">5</span>)</span>
+<span id="cb72-18"><a href=""></a>  )</span>
+<span id="cb72-19"><a href=""></a></span>
+<span id="cb72-20"><a href=""></a><span class="co"># Check results</span></span>
+<span id="cb72-21"><a href=""></a><span class="fu">summary</span>(boston.sf <span class="sc">%&gt;%</span> <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="fu">starts_with</span>(<span class="st">"crime_nn"</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   crime_nn1         crime_nn3         crime_nn5     
+ Min.   :  9.372   Min.   :  9.372   Min.   : 10.67  
+ 1st Qu.: 29.944   1st Qu.: 37.615   1st Qu.: 44.30  
+ Median : 54.036   Median : 62.835   Median : 70.27  
+ Mean   : 70.750   Mean   : 83.298   Mean   : 94.66  
+ 3rd Qu.: 90.145   3rd Qu.:107.735   3rd Qu.:127.14  
+ Max.   :596.529   Max.   :637.559   Max.   :683.53  </code></pre>
+</div>
+</div>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Note</strong></p>
+</div>
+<div class="callout-content">
+<p>Interpretation: crime_nn3 = 83.29 means the average distance to the 3 nearest crimes is 83.29 feet</p>
+</div>
+</div>
+</div>
+</section>
+<section id="which-k-value-correlates-most-with-price" class="slide level2">
+<h2>Which k value correlates most with price?</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb74"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb74-1"><a href=""></a><span class="co"># Which k value correlates most with price?</span></span>
+<span id="cb74-2"><a href=""></a>boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb74-3"><a href=""></a>  <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb74-4"><a href=""></a>  <span class="fu">select</span>(SalePrice, crime_nn1, crime_nn3, crime_nn5) <span class="sc">%&gt;%</span></span>
+<span id="cb74-5"><a href=""></a>  <span class="fu">cor</span>(<span class="at">use =</span> <span class="st">"complete.obs"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb74-6"><a href=""></a>  <span class="fu">as.data.frame</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb74-7"><a href=""></a>  <span class="fu">select</span>(SalePrice)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>            SalePrice
+SalePrice  1.00000000
+crime_nn1 -0.07317564
+crime_nn3 -0.08726806
+crime_nn5 -0.09599580</code></pre>
+</div>
+</div>
+<div class="callout callout-tip callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Tip</strong></p>
+</div>
+<div class="callout-content">
+<p>Finding: The kNN feature with the strongest correlation tells us the relevant “zone of influence” for crime perception!</p>
+</div>
+</div>
+</div>
+</section>
+<section class="slide level2">
+
+<p>Approach 3: Distance to Downtown</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb76"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb76-1"><a href=""></a><span class="co"># Define downtown Boston (Boston Common: 42.3551° N, 71.0656° W)</span></span>
+<span id="cb76-2"><a href=""></a>downtown <span class="ot">&lt;-</span> <span class="fu">st_sfc</span>(<span class="fu">st_point</span>(<span class="fu">c</span>(<span class="sc">-</span><span class="fl">71.0656</span>, <span class="fl">42.3551</span>)), <span class="at">crs =</span> <span class="st">"EPSG:4326"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb76-3"><a href=""></a>  <span class="fu">st_transform</span>(<span class="st">'ESRI:102286'</span>)</span>
+<span id="cb76-4"><a href=""></a></span>
+<span id="cb76-5"><a href=""></a><span class="co"># Calculate distance from each house to downtown</span></span>
+<span id="cb76-6"><a href=""></a>boston.sf <span class="ot">&lt;-</span> boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb76-7"><a href=""></a>  <span class="fu">mutate</span>(</span>
+<span id="cb76-8"><a href=""></a>    <span class="at">dist_downtown_ft =</span> <span class="fu">as.numeric</span>(<span class="fu">st_distance</span>(geometry, downtown)),</span>
+<span id="cb76-9"><a href=""></a>    <span class="at">dist_downtown_mi =</span> dist_downtown_ft <span class="sc">/</span> <span class="dv">5280</span></span>
+<span id="cb76-10"><a href=""></a>  )</span>
+<span id="cb76-11"><a href=""></a></span>
+<span id="cb76-12"><a href=""></a><span class="co"># Summary</span></span>
+<span id="cb76-13"><a href=""></a><span class="fu">summary</span>(boston.sf<span class="sc">$</span>dist_downtown_mi)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.05467 0.80699 1.37601 1.39335 1.94227 2.77678 </code></pre>
+</div>
+</div>
+</section>
+<section class="slide level2">
+
+<h3 id="all-spatial-features-together">All spatial features together</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb78"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb78-1"><a href=""></a><span class="co"># Summary of all spatial features created</span></span>
+<span id="cb78-2"><a href=""></a>spatial_summary <span class="ot">&lt;-</span> boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb78-3"><a href=""></a>  <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb78-4"><a href=""></a>  <span class="fu">select</span>(crimes.Buffer, crimes_500ft, crime_nn3, dist_downtown_mi) <span class="sc">%&gt;%</span></span>
+<span id="cb78-5"><a href=""></a>  <span class="fu">summary</span>()</span>
+<span id="cb78-6"><a href=""></a></span>
+<span id="cb78-7"><a href=""></a>spatial_summary</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> crimes.Buffer     crimes_500ft      crime_nn3       dist_downtown_mi 
+ Min.   :   4.0   Min.   :   0.0   Min.   :  9.372   Min.   :0.05467  
+ 1st Qu.: 105.0   1st Qu.:  63.0   1st Qu.: 37.615   1st Qu.:0.80699  
+ Median : 323.0   Median : 188.0   Median : 62.835   Median :1.37601  
+ Mean   : 440.2   Mean   : 261.9   Mean   : 83.298   Mean   :1.39335  
+ 3rd Qu.: 737.0   3rd Qu.: 427.0   3rd Qu.:107.735   3rd Qu.:1.94227  
+ Max.   :3108.0   Max.   :2088.0   Max.   :637.559   Max.   :2.77678  </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<table class="caption-top">
+<colgroup>
+<col style="width: 29%">
+<col style="width: 20%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Type</th>
+<th style="text-align: left;">What it Measures</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">crimes.Buffer (660ft)</td>
+<td style="text-align: left;">Buffer count</td>
+<td style="text-align: left;">Number of crimes near house</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">crimes_500ft</td>
+<td style="text-align: left;">Buffer count</td>
+<td style="text-align: left;">Crimes within 500ft</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">crime_nn3</td>
+<td style="text-align: left;">kNN distance</td>
+<td style="text-align: left;">Avg distance to 3 nearest crimes (ft)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">dist_downtown_mi</td>
+<td style="text-align: left;">Point distance</td>
+<td style="text-align: left;">Miles from downtown Boston</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<section class="slide level2">
+
+<h3 id="model-comparison-adding-spatial-features">Model Comparison: Adding Spatial Features</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb80"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb80-1"><a href=""></a>boston.sf <span class="ot">&lt;-</span> boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb80-2"><a href=""></a>  <span class="fu">mutate</span>(<span class="at">Age =</span> <span class="dv">2015</span> <span class="sc">-</span> YR_BUILT)  </span>
+<span id="cb80-3"><a href=""></a></span>
+<span id="cb80-4"><a href=""></a><span class="co"># Model 1: Structural only</span></span>
+<span id="cb80-5"><a href=""></a>model_structural <span class="ot">&lt;-</span> <span class="fu">lm</span>(SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> R_BDRMS <span class="sc">+</span> Age, </span>
+<span id="cb80-6"><a href=""></a>                       <span class="at">data =</span> boston.sf)</span>
+<span id="cb80-7"><a href=""></a></span>
+<span id="cb80-8"><a href=""></a><span class="co"># Model 2: Add spatial features</span></span>
+<span id="cb80-9"><a href=""></a>model_spatial <span class="ot">&lt;-</span> <span class="fu">lm</span>(SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> R_BDRMS <span class="sc">+</span> Age <span class="sc">+</span></span>
+<span id="cb80-10"><a href=""></a>                    crimes_500ft <span class="sc">+</span> crime_nn3 <span class="sc">+</span> dist_downtown_mi,</span>
+<span id="cb80-11"><a href=""></a>                    <span class="at">data =</span> boston.sf)</span>
+<span id="cb80-12"><a href=""></a></span>
+<span id="cb80-13"><a href=""></a><span class="co"># Compare</span></span>
+<span id="cb80-14"><a href=""></a><span class="fu">cat</span>(<span class="st">"Structural R²:"</span>, <span class="fu">round</span>(<span class="fu">summary</span>(model_structural)<span class="sc">$</span>r.squared, <span class="dv">4</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Structural R²: 0.2169 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb82"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb82-1"><a href=""></a><span class="fu">cat</span>(<span class="st">"With spatial R²:"</span>, <span class="fu">round</span>(<span class="fu">summary</span>(model_spatial)<span class="sc">$</span>r.squared, <span class="dv">4</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>With spatial R²: 0.3529 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb84"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb84-1"><a href=""></a><span class="fu">cat</span>(<span class="st">"Improvement:"</span>, <span class="fu">round</span>(<span class="fu">summary</span>(model_spatial)<span class="sc">$</span>r.squared <span class="sc">-</span> </span>
+<span id="cb84-2"><a href=""></a>                          <span class="fu">summary</span>(model_structural)<span class="sc">$</span>r.squared, <span class="dv">4</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Improvement: 0.136 </code></pre>
+</div>
+</div>
+</section>
+<section class="slide level2">
+
+</section></section>
+<section>
+<section id="part-3-fixed-effects" class="title-slide slide level1 center" data-background-color="#667eea">
+<h1>Part 3: Fixed Effects</h1>
+
+</section>
+<section id="what-are-fixed-effects" class="slide level2">
+<h2>What Are Fixed Effects?</h2>
+<p><strong>Fixed Effects</strong> = Categorical variables that capture <strong>all unmeasured characteristics</strong> of a group</p>
+<p><strong>In hedonic models:</strong></p>
+<ul>
+<li>Each neighborhood gets its own dummy variable</li>
+<li>Captures everything unique about that neighborhood we didn’t explicitly measure</li>
+</ul>
+<p><em>We technically already did this when I went over categorical data!</em></p>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p><strong>What They Capture:</strong></p>
+<ul>
+<li>School quality</li>
+<li>“Prestige” or reputation</li>
+<li>Walkability</li>
+<li>Access to jobs</li>
+<li>Cultural amenities</li>
+<li>Things we <strong>can’t easily measure</strong></li>
+</ul>
+</div><div class="column" style="width:50%;">
+<p><strong>The Code:</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb86"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb86-1"><a href=""></a><span class="co"># Add neighborhood fixed effects</span></span>
+<span id="cb86-2"><a href=""></a>reg5 <span class="ot">&lt;-</span> <span class="fu">lm</span>(</span>
+<span id="cb86-3"><a href=""></a>  SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> </span>
+<span id="cb86-4"><a href=""></a>              crimes_500ft <span class="sc">+</span> </span>
+<span id="cb86-5"><a href=""></a>              parks_nn3 <span class="sc">+</span> </span>
+<span id="cb86-6"><a href=""></a>              <span class="fu">as.factor</span>(name),  <span class="co"># FE</span></span>
+<span id="cb86-7"><a href=""></a>  <span class="at">data =</span> boston.sf</span>
+<span id="cb86-8"><a href=""></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>R creates a dummy for each neighborhood automatically!</p>
+</div></div>
+</section>
+<section id="how-fixed-effects-work" class="slide level2">
+<h2>How Fixed Effects Work</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb87"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb87-1"><a href=""></a><span class="co"># Behind the scenes, R creates dummies:</span></span>
+<span id="cb87-2"><a href=""></a><span class="co"># is_BackBay = 1 if Back Bay, 0 otherwise</span></span>
+<span id="cb87-3"><a href=""></a><span class="co"># is_Beacon = 1 if Beacon Hill, 0 otherwise</span></span>
+<span id="cb87-4"><a href=""></a><span class="co"># is_Allston = 1 if Allston, 0 otherwise</span></span>
+<span id="cb87-5"><a href=""></a><span class="co"># ... (R drops one as reference category)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>Interpretation Example:</strong></p>
+<pre><code>Coefficients:
+(Intercept)           50000
+LivingArea              150
+nameBack_Bay          85000   ← $85k premium vs. reference
+nameBeacon_Hill      125000   ← $125k premium  
+nameAllston          -15000   ← $15k discount</code></pre>
+<p><strong>Each coefficient = price premium/discount for that neighborhood</strong> (holding all else constant)</p>
+</section>
+<section id="why-use-fixed-effects" class="slide level2">
+<h2>Why Use Fixed Effects?</h2>
+<div class="columns">
+<div class="column" style="width:50%;">
+<h3 id="dramatically-improve-prediction">Dramatically Improve Prediction</h3>
+<pre><code>Model Comparison (R²):
+- Structural only:     0.58
+- + Spatial features:  0.67
+- + Fixed Effects:     0.81 ✓</code></pre>
+<p><strong>Why such a big jump?</strong></p>
+<ul>
+<li>Neighborhoods bundle many unmeasured factors</li>
+<li>School districts</li>
+<li>Job access</li>
+<li>Amenities</li>
+<li>“Cool factor”</li>
+</ul>
+</div><div class="column" style="width:50%;">
+<h3 id="coefficients-change">Coefficients Change</h3>
+<p><strong>Crime coefficient:</strong></p>
+<ul>
+<li>Without FE: -$125/crime</li>
+<li>With FE: -$85/crime</li>
+</ul>
+<p><strong>Why?</strong></p>
+<ul>
+<li>Without FE: captured neighborhood confounders too</li>
+<li>With FE: neighborhoods “absorb” other differences</li>
+<li>Now just the crime effect</li>
+</ul>
+</div></div>
+<p><strong>Trade-off:</strong> FE are powerful but they’re a <strong>black box</strong> - we don’t know WHY Back Bay commands a premium</p>
+</section>
+<section id="lets-compare-all-our-models" class="slide level2">
+<h2>Let’s Compare All Our Models</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb90"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb90-1"><a href=""></a><span class="co"># Model 3: Structural Only</span></span>
+<span id="cb90-2"><a href=""></a>reg3 <span class="ot">&lt;-</span> <span class="fu">lm</span>(SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> R_FULL_BTH, </span>
+<span id="cb90-3"><a href=""></a>           <span class="at">data =</span> boston.sf)</span>
+<span id="cb90-4"><a href=""></a></span>
+<span id="cb90-5"><a href=""></a><span class="co"># Model 4: Add Spatial Features  </span></span>
+<span id="cb90-6"><a href=""></a>reg4 <span class="ot">&lt;-</span> <span class="fu">lm</span>(SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> R_FULL_BTH <span class="sc">+</span></span>
+<span id="cb90-7"><a href=""></a>                       crimes_500ft <span class="sc">+</span> crime_nn3<span class="sc">+</span> dist_downtown_mi,</span>
+<span id="cb90-8"><a href=""></a>           <span class="at">data =</span> boston.sf)</span>
+<span id="cb90-9"><a href=""></a></span>
+<span id="cb90-10"><a href=""></a>boston.sf <span class="ot">&lt;-</span> boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb90-11"><a href=""></a>  <span class="fu">st_join</span>(nhoods, <span class="at">join =</span> st_intersects)</span>
+<span id="cb90-12"><a href=""></a></span>
+<span id="cb90-13"><a href=""></a><span class="co"># Model 5: Add Fixed Effects</span></span>
+<span id="cb90-14"><a href=""></a>reg5 <span class="ot">&lt;-</span> <span class="fu">lm</span>(SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> R_FULL_BTH <span class="sc">+</span></span>
+<span id="cb90-15"><a href=""></a>                       crimes_500ft <span class="sc">+</span> crime_nn3<span class="sc">+</span> dist_downtown_mi <span class="sc">+</span></span>
+<span id="cb90-16"><a href=""></a>                       <span class="fu">as.factor</span>(name),</span>
+<span id="cb90-17"><a href=""></a>           <span class="at">data =</span> boston.sf)</span>
+<span id="cb90-18"><a href=""></a><span class="fu">library</span>(stargazer)</span>
+<span id="cb90-19"><a href=""></a><span class="co"># Compare in-sample fit</span></span>
+<span id="cb90-20"><a href=""></a><span class="fu">stargazer</span>(reg3, reg4, reg5, <span class="at">type =</span> <span class="st">"text"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+=========================================================================================================
+                                                         Dependent variable:                             
+                             ----------------------------------------------------------------------------
+                                                              SalePrice                                  
+                                       (1)                      (2)                       (3)            
+---------------------------------------------------------------------------------------------------------
+LivingArea                          148.860***               111.501***                118.107***        
+                                     (21.242)                 (20.077)                  (8.586)          
+                                                                                                         
+Age                                 322.029***                123.069                  212.973***        
+                                     (80.730)                 (75.779)                  (30.508)         
+                                                                                                         
+R_FULL_BTH                        113,372.800***            40,173.330*              50,895.880***       
+                                   (23,735.650)             (22,987.460)              (9,458.101)        
+                                                                                                         
+crimes_500ft                                                 762.817***               -211.220***        
+                                                              (85.812)                  (42.796)         
+                                                                                                         
+crime_nn3                                                   2,219.712***               466.580***        
+                                                             (242.880)                 (105.506)         
+                                                                                                         
+dist_downtown_mi                                          -202,215.700***           -103,165.100***      
+                                                            (29,626.430)              (30,260.730)       
+                                                                                                         
+as.factor(name)Back Bay                                                             7,668,782.000***     
+                                                                                     (152,445.600)       
+                                                                                                         
+as.factor(name)Bay Village                                                          1,374,060.000***     
+                                                                                     (225,127.300)       
+                                                                                                         
+as.factor(name)Beacon Hill                                                          1,720,668.000***     
+                                                                                     (101,788.600)       
+                                                                                                         
+as.factor(name)Brighton                                                               -186,898.400       
+                                                                                     (120,211.300)       
+                                                                                                         
+as.factor(name)Charlestown                                                            -99,353.820        
+                                                                                      (92,604.600)       
+                                                                                                         
+as.factor(name)Dorchester                                                           -555,954.300***      
+                                                                                      (85,853.130)       
+                                                                                                         
+as.factor(name)Downtown                                                               216,317.000        
+                                                                                     (226,782.100)       
+                                                                                                         
+as.factor(name)East Boston                                                          -574,986.800***      
+                                                                                      (87,455.850)       
+                                                                                                         
+as.factor(name)Fenway                                                               1,034,562.000***     
+                                                                                     (169,543.800)       
+                                                                                                         
+as.factor(name)Hyde Park                                                            -480,342.800***      
+                                                                                      (93,199.370)       
+                                                                                                         
+as.factor(name)Jamaica Plain                                                         -198,209.800**      
+                                                                                      (87,603.690)       
+                                                                                                         
+as.factor(name)Mattapan                                                             -561,786.900***      
+                                                                                      (90,587.160)       
+                                                                                                         
+as.factor(name)Mission Hill                                                          214,567.100**       
+                                                                                     (101,389.300)       
+                                                                                                         
+as.factor(name)Roslindale                                                           -442,450.500***      
+                                                                                      (89,746.200)       
+                                                                                                         
+as.factor(name)Roxbury                                                              -592,878.500***      
+                                                                                      (88,945.650)       
+                                                                                                         
+as.factor(name)South Boston                                                         -290,863.400***      
+                                                                                      (90,664.580)       
+                                                                                                         
+as.factor(name)South End                                                            1,750,702.000***     
+                                                                                      (98,722.040)       
+                                                                                                         
+as.factor(name)West Roxbury                                                         -380,868.400***      
+                                                                                      (91,694.890)       
+                                                                                                         
+Constant                            50,899.030             199,477.900***            778,604.600***      
+                                   (39,788.170)             (70,002.400)             (100,039.000)       
+                                                                                                         
+---------------------------------------------------------------------------------------------------------
+Observations                          1,485                    1,485                     1,485           
+R2                                    0.152                    0.276                     0.885           
+Adjusted R2                           0.150                    0.273                     0.883           
+Residual Std. Error          557,399.300 (df = 1481)  515,703.200 (df = 1478)   206,473.300 (df = 1460)  
+F Statistic                  88.527*** (df = 3; 1481) 93.739*** (df = 6; 1478) 469.541*** (df = 24; 1460)
+=========================================================================================================
+Note:                                                                         *p&lt;0.1; **p&lt;0.05; ***p&lt;0.01</code></pre>
+</div>
+</div>
+<p><strong>But in-sample R² can be misleading! We need cross-validation…</strong></p>
+</section>
+<section class="slide level2">
+
+</section></section>
+<section>
+<section id="part-5-cross-validation-with-categorical-variables" class="title-slide slide level1 center" data-background-color="#667eea">
+<h1>Part 5: Cross-Validation (with Categorical Variables)</h1>
+
+</section>
+<section id="cv-recap-from-last-week" class="slide level2 scrollable">
+<h2>CV Recap (From Last Week)</h2>
+<p><strong>Three common validation approaches:</strong></p>
+<ol type="1">
+<li><strong>Train/Test Split</strong> - 80/20 split, simple but unstable</li>
+<li><strong>k-Fold Cross-Validation</strong> - Split into k folds, train on k-1, test on 1, repeat</li>
+<li><strong>LOOCV</strong> - Leave one observation out at a time (special case of <em>k</em>-fold)</li>
+</ol>
+<p><strong>Today we’ll use k-fold CV</strong> to compare our hedonic models</p>
+<div class="columns">
+<div class="column" style="width:50%;">
+<div class="cell">
+<div class="sourceCode cell-code" id="cb92"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb92-1"><a href=""></a><span class="fu">library</span>(caret)</span>
+<span id="cb92-2"><a href=""></a></span>
+<span id="cb92-3"><a href=""></a>ctrl <span class="ot">&lt;-</span> <span class="fu">trainControl</span>(</span>
+<span id="cb92-4"><a href=""></a>  <span class="at">method =</span> <span class="st">"cv"</span>,</span>
+<span id="cb92-5"><a href=""></a>  <span class="at">number =</span> <span class="dv">10</span>  <span class="co"># 10-fold CV</span></span>
+<span id="cb92-6"><a href=""></a>)</span>
+<span id="cb92-7"><a href=""></a></span>
+<span id="cb92-8"><a href=""></a>model_cv <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb92-9"><a href=""></a>  SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age,</span>
+<span id="cb92-10"><a href=""></a>  <span class="at">data =</span> boston.sf,</span>
+<span id="cb92-11"><a href=""></a>  <span class="at">method =</span> <span class="st">"lm"</span>,</span>
+<span id="cb92-12"><a href=""></a>  <span class="at">trControl =</span> ctrl</span>
+<span id="cb92-13"><a href=""></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div><div class="column" style="width:50%;">
+<p><strong>Why CV?</strong></p>
+<ul>
+<li>Tells us how well model predicts NEW data</li>
+<li>More honest than in-sample R²</li>
+<li>Helps detect overfitting</li>
+</ul>
+</div></div>
+</section>
+<section id="comparing-models-with-cv" class="slide level2">
+<h2>Comparing Models with CV</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb93"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb93-1"><a href=""></a><span class="fu">library</span>(caret)</span>
+<span id="cb93-2"><a href=""></a>ctrl <span class="ot">&lt;-</span> <span class="fu">trainControl</span>(<span class="at">method =</span> <span class="st">"cv"</span>, <span class="at">number =</span> <span class="dv">10</span>)</span>
+<span id="cb93-3"><a href=""></a></span>
+<span id="cb93-4"><a href=""></a><span class="co"># Model 1: Structural</span></span>
+<span id="cb93-5"><a href=""></a>cv_m1 <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb93-6"><a href=""></a>  SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> R_FULL_BTH,</span>
+<span id="cb93-7"><a href=""></a>  <span class="at">data =</span> boston.sf, <span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">trControl =</span> ctrl</span>
+<span id="cb93-8"><a href=""></a>)</span>
+<span id="cb93-9"><a href=""></a></span>
+<span id="cb93-10"><a href=""></a><span class="co"># Model 2: + Spatial</span></span>
+<span id="cb93-11"><a href=""></a>cv_m2 <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb93-12"><a href=""></a>  SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> R_FULL_BTH <span class="sc">+</span> crimes_500ft <span class="sc">+</span> crime_nn3,</span>
+<span id="cb93-13"><a href=""></a>  <span class="at">data =</span> boston.sf, <span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">trControl =</span> ctrl</span>
+<span id="cb93-14"><a href=""></a>)</span>
+<span id="cb93-15"><a href=""></a></span>
+<span id="cb93-16"><a href=""></a><span class="co"># Model 3: + Fixed Effects (BUT WAIT - there's a (potential) problem!)</span></span>
+<span id="cb93-17"><a href=""></a>cv_m3 <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb93-18"><a href=""></a>  SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> R_FULL_BTH <span class="sc">+</span> crimes_500ft <span class="sc">+</span> crime_nn3 <span class="sc">+</span> </span>
+<span id="cb93-19"><a href=""></a>              <span class="fu">as.factor</span>(name),</span>
+<span id="cb93-20"><a href=""></a>  <span class="at">data =</span> boston.sf, <span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">trControl =</span> ctrl</span>
+<span id="cb93-21"><a href=""></a>)</span>
+<span id="cb93-22"><a href=""></a></span>
+<span id="cb93-23"><a href=""></a><span class="co"># Compare</span></span>
+<span id="cb93-24"><a href=""></a><span class="fu">data.frame</span>(</span>
+<span id="cb93-25"><a href=""></a>  <span class="at">Model =</span> <span class="fu">c</span>(<span class="st">"Structural"</span>, <span class="st">"Spatial"</span>, <span class="st">"Fixed Effects"</span>),</span>
+<span id="cb93-26"><a href=""></a>  <span class="at">RMSE =</span> <span class="fu">c</span>(cv_m1<span class="sc">$</span>results<span class="sc">$</span>RMSE, cv_m2<span class="sc">$</span>results<span class="sc">$</span>RMSE, cv_m3<span class="sc">$</span>results<span class="sc">$</span>RMSE)</span>
+<span id="cb93-27"><a href=""></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="the-problem-sparse-categories" class="slide level2 scrollable">
+<h2>⚠️ The Problem: Sparse Categories</h2>
+<h3 id="when-cv-fails-with-categorical-variables">When CV Fails with Categorical Variables</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb94"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb94-1"><a href=""></a><span class="co"># You might see this error:</span></span>
+<span id="cb94-2"><a href=""></a>Error <span class="cf">in</span> model.frame.default<span class="sc">:</span> </span>
+<span id="cb94-3"><a href=""></a>  factor <span class="st">'name'</span> has new level <span class="st">'West End'</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>What happened?</strong></p>
+<ol type="1">
+<li>Random split created 10 folds</li>
+<li>All “West End” sales ended up in ONE fold (the test fold)</li>
+<li>Training folds never saw “West End”</li>
+<li>Model can’t predict for a category it never learned</li>
+</ol>
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>The Issue</strong></p>
+</div>
+<div class="callout-content">
+<p>When neighborhoods have <strong>very few sales</strong> (&lt;10), random CV splits can put all instances in the same fold, breaking the model.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="check-your-data-first" class="slide level2">
+<h2>Check Your Data First!</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb95"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb95-1"><a href=""></a><span class="co"># ALWAYS run this before CV with categorical variables</span></span>
+<span id="cb95-2"><a href=""></a>category_check %</span>
+<span id="cb95-3"><a href=""></a>  <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb95-4"><a href=""></a>  <span class="fu">count</span>(name) <span class="sc">%&gt;%</span></span>
+<span id="cb95-5"><a href=""></a>  <span class="fu">arrange</span>(n)</span>
+<span id="cb95-6"><a href=""></a></span>
+<span id="cb95-7"><a href=""></a><span class="fu">print</span>(category_check)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>Typical output:</strong></p>
+<pre><code>name                n
+West End            3  ⚠️ Problem!
+Bay Village         5  ⚠️ Risky
+Leather District    8  ⚠️ Borderline
+Back Bay           89  ✓ Safe
+South Boston      112  ✓ Safe</code></pre>
+<div class="callout callout-tip callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Tip</strong></p>
+</div>
+<div class="callout-content">
+<p><strong>Rule of Thumb:</strong> Categories with <strong>n &lt; 10</strong> will likely cause CV problems</p>
+</div>
+</div>
+</div>
+</section>
+<section id="solution-group-small-neighborhoods" class="slide level2">
+<h2>Solution: Group Small Neighborhoods</h2>
+<p><strong>Most practical approach:</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb97"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb97-1"><a href=""></a><span class="co"># Step 1: Add count column</span></span>
+<span id="cb97-2"><a href=""></a>boston.sf <span class="ot">&lt;-</span> boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb97-3"><a href=""></a>  <span class="fu">add_count</span>(name)</span>
+<span id="cb97-4"><a href=""></a></span>
+<span id="cb97-5"><a href=""></a><span class="co"># Step 2: Group small neighborhoods</span></span>
+<span id="cb97-6"><a href=""></a>boston.sf <span class="ot">&lt;-</span> boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb97-7"><a href=""></a>  <span class="fu">mutate</span>(</span>
+<span id="cb97-8"><a href=""></a>    <span class="at">name_cv =</span> <span class="fu">if_else</span>(</span>
+<span id="cb97-9"><a href=""></a>      n <span class="sc">&lt;</span> <span class="dv">10</span>,                       <span class="co"># If fewer than 10 sales</span></span>
+<span id="cb97-10"><a href=""></a>      <span class="st">"Small_Neighborhoods"</span>,        <span class="co"># Group them</span></span>
+<span id="cb97-11"><a href=""></a>      <span class="fu">as.character</span>(name)            <span class="co"># Keep original</span></span>
+<span id="cb97-12"><a href=""></a>    ),</span>
+<span id="cb97-13"><a href=""></a>    <span class="at">name_cv =</span> <span class="fu">as.factor</span>(name_cv)</span>
+<span id="cb97-14"><a href=""></a>  )</span>
+<span id="cb97-15"><a href=""></a></span>
+<span id="cb97-16"><a href=""></a><span class="co"># Step 3: Use grouped version in CV</span></span>
+<span id="cb97-17"><a href=""></a>cv_model_fe <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb97-18"><a href=""></a>  SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> crimes_500ft <span class="sc">+</span> </span>
+<span id="cb97-19"><a href=""></a>              <span class="fu">as.factor</span>(name_cv),   <span class="co"># Use name_cv, not name!</span></span>
+<span id="cb97-20"><a href=""></a>  <span class="at">data =</span> boston.sf,</span>
+<span id="cb97-21"><a href=""></a>  <span class="at">method =</span> <span class="st">"lm"</span>,</span>
+<span id="cb97-22"><a href=""></a>  <span class="at">trControl =</span> <span class="fu">trainControl</span>(<span class="at">method =</span> <span class="st">"cv"</span>, <span class="at">number =</span> <span class="dv">10</span>)</span>
+<span id="cb97-23"><a href=""></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>Trade-off:</strong> Lose granularity for small neighborhoods, but avoid CV crashes</p>
+</section>
+<section id="alternative-drop-sparse-categories" class="slide level2">
+<h2>Alternative: Drop Sparse Categories</h2>
+<p><strong>If grouping doesn’t make sense:</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb98"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb98-1"><a href=""></a><span class="co"># Remove neighborhoods with &lt; 10 sales</span></span>
+<span id="cb98-2"><a href=""></a>neighborhood_counts %</span>
+<span id="cb98-3"><a href=""></a>  <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb98-4"><a href=""></a>  <span class="fu">count</span>(name)</span>
+<span id="cb98-5"><a href=""></a></span>
+<span id="cb98-6"><a href=""></a>keep_neighborhoods %</span>
+<span id="cb98-7"><a href=""></a>  <span class="fu">filter</span>(n <span class="sc">&gt;=</span> <span class="dv">10</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb98-8"><a href=""></a>  <span class="fu">pull</span>(name)</span>
+<span id="cb98-9"><a href=""></a></span>
+<span id="cb98-10"><a href=""></a>boston_filtered %</span>
+<span id="cb98-11"><a href=""></a>  <span class="fu">filter</span>(name <span class="sc">%in%</span> keep_neighborhoods)</span>
+<span id="cb98-12"><a href=""></a></span>
+<span id="cb98-13"><a href=""></a><span class="fu">cat</span>(<span class="st">"Removed"</span>, <span class="fu">nrow</span>(boston.sf) <span class="sc">-</span> <span class="fu">nrow</span>(boston_filtered), <span class="st">"observations"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="callout callout-warning callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Warning</strong></p>
+</div>
+<div class="callout-content">
+<p><strong>Consider carefully:</strong> Which neighborhoods are you excluding? Often those with less data are marginalized communities. Document what you removed and why.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="my-recommended-workflow" class="slide level2">
+<h2>My Recommended Workflow</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb99"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb99-1"><a href=""></a><span class="co"># 1. Check category sizes</span></span>
+<span id="cb99-2"><a href=""></a>boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb99-3"><a href=""></a>  <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb99-4"><a href=""></a>  <span class="fu">count</span>(name) <span class="sc">%&gt;%</span></span>
+<span id="cb99-5"><a href=""></a>  <span class="fu">arrange</span>(n) <span class="sc">%&gt;%</span></span>
+<span id="cb99-6"><a href=""></a>  <span class="fu">print</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 19 × 2
+   name              n
+   &lt;chr&gt;         &lt;int&gt;
+ 1 Bay Village       1
+ 2 Downtown          1
+ 3 Fenway            2
+ 4 Back Bay          3
+ 5 Allston           6
+ 6 Brighton          6
+ 7 Mission Hill     14
+ 8 Beacon Hill      17
+ 9 South End        20
+10 Roxbury          63
+11 Charlestown      65
+12 Mattapan         65
+13 South Boston     80
+14 Jamaica Plain   113
+15 Roslindale      142
+16 East Boston     149
+17 Hyde Park       152
+18 West Roxbury    242
+19 Dorchester      344</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb101"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb101-1"><a href=""></a><span class="co"># 2. Group if needed</span></span>
+<span id="cb101-2"><a href=""></a>boston.sf <span class="ot">&lt;-</span> boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb101-3"><a href=""></a>  <span class="fu">add_count</span>(name) <span class="sc">%&gt;%</span></span>
+<span id="cb101-4"><a href=""></a>  <span class="fu">mutate</span>(</span>
+<span id="cb101-5"><a href=""></a>    <span class="at">name_cv =</span> <span class="fu">if_else</span>(n <span class="sc">&lt;</span> <span class="dv">10</span>, <span class="st">"Small_Neighborhoods"</span>, <span class="fu">as.character</span>(name)),</span>
+<span id="cb101-6"><a href=""></a>    <span class="at">name_cv =</span> <span class="fu">as.factor</span>(name_cv)</span>
+<span id="cb101-7"><a href=""></a>  )</span>
+<span id="cb101-8"><a href=""></a></span>
+<span id="cb101-9"><a href=""></a><span class="co"># 3. Set up CV</span></span>
+<span id="cb101-10"><a href=""></a>ctrl <span class="ot">&lt;-</span> <span class="fu">trainControl</span>(<span class="at">method =</span> <span class="st">"cv"</span>, <span class="at">number =</span> <span class="dv">10</span>)</span>
+<span id="cb101-11"><a href=""></a></span>
+<span id="cb101-12"><a href=""></a><span class="co"># 4. Use grouped neighborhoods in ALL models with FE</span></span>
+<span id="cb101-13"><a href=""></a>model <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb101-14"><a href=""></a>  SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> crimes_500ft <span class="sc">+</span> <span class="fu">as.factor</span>(name_cv),</span>
+<span id="cb101-15"><a href=""></a>  <span class="at">data =</span> boston.sf,</span>
+<span id="cb101-16"><a href=""></a>  <span class="at">method =</span> <span class="st">"lm"</span>,</span>
+<span id="cb101-17"><a href=""></a>  <span class="at">trControl =</span> ctrl</span>
+<span id="cb101-18"><a href=""></a>)</span>
+<span id="cb101-19"><a href=""></a></span>
+<span id="cb101-20"><a href=""></a><span class="co"># 5. Report</span></span>
+<span id="cb101-21"><a href=""></a><span class="fu">cat</span>(<span class="st">"10-fold CV RMSE:"</span>, <span class="fu">round</span>(model<span class="sc">$</span>results<span class="sc">$</span>RMSE, <span class="dv">0</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>10-fold CV RMSE: 346313 </code></pre>
+</div>
+</div>
+</section>
+<section id="full-model-comparison-with-cv" class="slide level2">
+<h2>Full Model Comparison with CV</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb103"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb103-1"><a href=""></a><span class="fu">library</span>(caret)</span>
+<span id="cb103-2"><a href=""></a></span>
+<span id="cb103-3"><a href=""></a><span class="co"># Prep data</span></span>
+<span id="cb103-4"><a href=""></a>boston.sf <span class="ot">&lt;-</span> boston.sf <span class="sc">%&gt;%</span></span>
+<span id="cb103-5"><a href=""></a>  <span class="fu">add_count</span>(name) <span class="sc">%&gt;%</span></span>
+<span id="cb103-6"><a href=""></a>  <span class="fu">mutate</span>(<span class="at">name_cv =</span> <span class="fu">if_else</span>(n <span class="sc">&lt;</span> <span class="dv">10</span>, <span class="st">"Small_Neighborhoods"</span>, <span class="fu">as.character</span>(name)),</span>
+<span id="cb103-7"><a href=""></a>         <span class="at">name_cv =</span> <span class="fu">as.factor</span>(name_cv))</span>
+<span id="cb103-8"><a href=""></a></span>
+<span id="cb103-9"><a href=""></a>ctrl <span class="ot">&lt;-</span> <span class="fu">trainControl</span>(<span class="at">method =</span> <span class="st">"cv"</span>, <span class="at">number =</span> <span class="dv">10</span>)</span>
+<span id="cb103-10"><a href=""></a></span>
+<span id="cb103-11"><a href=""></a><span class="co"># Compare models</span></span>
+<span id="cb103-12"><a href=""></a>cv_structural <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb103-13"><a href=""></a>  SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> R_FULL_BTH,</span>
+<span id="cb103-14"><a href=""></a>  <span class="at">data =</span> boston.sf, <span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">trControl =</span> ctrl</span>
+<span id="cb103-15"><a href=""></a>)</span>
+<span id="cb103-16"><a href=""></a></span>
+<span id="cb103-17"><a href=""></a>cv_spatial <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb103-18"><a href=""></a>  SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> R_FULL_BTH <span class="sc">+</span> crimes_500ft <span class="sc">+</span> crime_nn3,</span>
+<span id="cb103-19"><a href=""></a>  <span class="at">data =</span> boston.sf, <span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">trControl =</span> ctrl</span>
+<span id="cb103-20"><a href=""></a>)</span>
+<span id="cb103-21"><a href=""></a></span>
+<span id="cb103-22"><a href=""></a>cv_fixedeffects <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb103-23"><a href=""></a>  SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> R_FULL_BTH <span class="sc">+</span> crimes_500ft <span class="sc">+</span> crime_nn3 <span class="sc">+</span> </span>
+<span id="cb103-24"><a href=""></a>              <span class="fu">as.factor</span>(name_cv),</span>
+<span id="cb103-25"><a href=""></a>  <span class="at">data =</span> boston.sf, <span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">trControl =</span> ctrl</span>
+<span id="cb103-26"><a href=""></a>)</span>
+<span id="cb103-27"><a href=""></a></span>
+<span id="cb103-28"><a href=""></a><span class="co"># Results</span></span>
+<span id="cb103-29"><a href=""></a><span class="fu">data.frame</span>(</span>
+<span id="cb103-30"><a href=""></a>  <span class="at">Model =</span> <span class="fu">c</span>(<span class="st">"Structural"</span>, <span class="st">"+ Spatial"</span>, <span class="st">"+ Fixed Effects"</span>),</span>
+<span id="cb103-31"><a href=""></a>  <span class="at">RMSE =</span> <span class="fu">c</span>(cv_structural<span class="sc">$</span>results<span class="sc">$</span>RMSE, </span>
+<span id="cb103-32"><a href=""></a>           cv_spatial<span class="sc">$</span>results<span class="sc">$</span>RMSE, </span>
+<span id="cb103-33"><a href=""></a>           cv_fixedeffects<span class="sc">$</span>results<span class="sc">$</span>RMSE)</span>
+<span id="cb103-34"><a href=""></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>            Model     RMSE
+1      Structural 528075.6
+2       + Spatial 514993.5
+3 + Fixed Effects 348201.7</code></pre>
+</div>
+</div>
+</section>
+<section id="expected-results" class="slide level2">
+<h2>Expected Results</h2>
+<p><strong>Typical pattern:</strong></p>
+<pre><code>Model              RMSE      Interpretation
+Structural        $533,330.60   Baseline - just house characteristics
++ Spatial         $500,421.5    Adding location features helps!
++ Fixed Effects   $347,261.30   Neighborhoods capture a LOT</code></pre>
+<p><em>Note: these values are kind of ginormous - remember RMSE squares big errors, so outliers can have a really large impact</em></p>
+<p><strong>Key Insight:</strong> Each layer improves <strong>out-of-sample</strong> prediction, with fixed effects providing the biggest boost</p>
+<p><strong>Why?</strong> Neighborhoods bundle many unmeasured factors (schools, amenities, prestige) that we can’t easily quantify individually</p>
+</section>
+<section id="investigating-those-errors" class="slide level2">
+<h2>Investigating those errors…</h2>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure>
+<p><img data-src="week6_slides_files/figure-revealjs/unnamed-chunk-52-1.png" width="960"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+       0   417500   519000   647980   650000 11600000 </code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 10 × 3
+   SalePrice LivingArea name       
+       &lt;dbl&gt;      &lt;dbl&gt; &lt;chr&gt;      
+ 1  11600000       9908 Back Bay   
+ 2   9500000       5283 Back Bay   
+ 3   6350000       4765 Back Bay   
+ 4   4600000       3018 Beacon Hill
+ 5   4300000       3981 South End  
+ 6   4274500       5439 Beacon Hill
+ 7   4200000       4146 South End  
+ 8   3900000       4396 Beacon Hill
+ 9   3877500       3849 Beacon Hill
+10   3810000       4449 Beacon Hill</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure>
+<p><img data-src="week6_slides_files/figure-revealjs/unnamed-chunk-52-2.png" width="960"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Look for:</strong> - Prices over $2-3 million (could be luxury condos or errors) - Prices near $0 (data errors) - Long right tail in histogram</p>
+</section>
+<section class="slide level2">
+
+</section></section>
+<section>
+<section id="what-to-do" class="title-slide slide level1 center">
+<h1>What to Do?</h1>
+<p><strong>Log Transform the skewed dependent variable</strong></p>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Interpreting Log Models</strong></p>
+</div>
+<div class="callout-content">
+<ul>
+<li>RMSE is now in <strong>log-dollars</strong> (hard to interpret)</li>
+<li>To convert back: <code>exp(predictions)</code> gives actual dollars</li>
+<li>Coefficients now represent <strong>percentage changes</strong>, not dollar changes</li>
+<li>This is standard practice in hedonic modeling!</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+<section id="team-exercise-practice-what-weve-done-and-build-your-best-model" class="slide level2 scrollable">
+<h2>Team Exercise: Practice What We’ve Done and Build Your Best Model</h2>
+<p><strong>Goal:</strong> Create a comprehensive hedonic model using ALL concepts from today (and last week)</p>
+<p><strong>Requirements:</strong></p>
+<ol type="1">
+<li>Structural variables (including categorical)</li>
+<li>Spatial features (create your own - nhttps://data.boston.gov/group/geospatial</li>
+<li>At least one interaction term</li>
+<li>One non-linear (polynomial term)</li>
+<li>Neighborhood fixed effects (handle sparse categories!)</li>
+<li>10-fold cross-validation</li>
+<li>Report final RMSE</li>
+</ol>
+<p><em>Use diagnostics from last week as you build!</em></p>
+</section>
+<section id="report-out-on-board" class="slide level2 scrollable">
+<h2>Report Out on Board</h2>
+<p><strong>Each team will share (3 minutes):</strong></p>
+<ol type="1">
+<li><p><strong>Variables used:</strong></p>
+<ul>
+<li>Structural: ____________</li>
+<li>Spatial: ____________</li>
+<li>Non-linear: __________</li>
+<li>Interactions: ____________</li>
+<li>Fixed Effects: Yes/No, how handled sparse categories?</li>
+</ul></li>
+<li><p><strong>Final cross-validated RMSE:</strong> $____________ and <strong>MAE</strong> $______________</p></li>
+<li><p><strong>One insight:</strong></p>
+<ul>
+<li>What made the biggest difference?</li>
+<li>Did anything surprise you?</li>
+<li>Which variables mattered most?</li>
+</ul></li>
+</ol>
+</section>
+<section id="tips-for-success" class="slide level2">
+<h2>Tips for Success</h2>
+<div class="columns">
+<div class="column" style="width:50%;">
+<h3 id="do">✅ Do:</h3>
+<ul>
+<li>Start simple, add complexity</li>
+<li>Check for NAs: <code>sum(is.na())</code></li>
+<li>Test on small subset first</li>
+<li>Comment your code</li>
+<li>Check coefficient signs</li>
+<li>Use <code>glimpse()</code>, <code>summary()</code></li>
+</ul>
+<h3 id="dont">❌ Don’t:</h3>
+<ul>
+<li>Add 50 variables at once</li>
+<li>Ignore errors</li>
+<li>Forget <code>st_drop_geometry()</code> for non-spatial operations</li>
+<li>Skip sparse category check</li>
+</ul>
+</div><div class="column" style="width:50%;">
+<h3 id="common-errors">Common Errors</h3>
+<p><strong>“Factor has new levels”</strong> → Group sparse categories</p>
+<p><strong>“Computationally singular”</strong> → Remove collinear variables</p>
+<p><strong>Very high RMSE</strong> → Check outliers, scale</p>
+<p><strong>CV takes forever</strong> → Simplify model or reduce folds</p>
+<p><strong>Negative R²</strong> → Model worse than mean, rethink variables</p>
+</div></div>
+</section>
+<section class="slide level2">
+
+
+</section></section>
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<div class="footer footer-default">
+
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="week6_slides_files/libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="week6_slides_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="week6_slides_files/libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="week6_slides_files/libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="week6_slides_files/libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="week6_slides_files/libs/revealjs/plugin/reveal-chalkboard/plugin.js"></script>
+  <script src="week6_slides_files/libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="week6_slides_files/libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="week6_slides_files/libs/revealjs/plugin/search/search.js"></script>
+  <script src="week6_slides_files/libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script src="week6_slides_files/libs/revealjs/plugin/math/math.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': true,
+'previewLinksAuto': false,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleChalkboard(event)\"><kbd>b</kbd> Toggle Chalkboard</a></li>\n<li class=\"slide-tool-item\" data-item=\"6\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleNotesCanvas(event)\"><kbd>c</kbd> Toggle Notes Canvas</a></li>\n<li class=\"slide-tool-item\" data-item=\"7\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.downloadDrawings(event)\"><kbd>d</kbd> Download Drawings</a></li>\n<li class=\"slide-tool-item\" data-item=\"8\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'chalkboard': {"buttons":true},
+'smaller': true,
+ 
+        // Display controls in the bottom right corner
+        controls: false,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: false,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'edges',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: true,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'none',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1050,
+
+        height: 700,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.1,
+
+        math: {
+          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, RevealChalkboard, QuartoSupport,
+
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    
+    <script>
+      // htmlwidgets need to know to resize themselves when slides are shown/hidden.
+      // Fire the "slideenter" event (handled by htmlwidgets.js) when the current
+      // slide changes (different for each slide format).
+      (function () {
+        // dispatch for htmlwidgets
+        function fireSlideEnter() {
+          const event = window.document.createEvent("Event");
+          event.initEvent("slideenter", true, true);
+          window.document.dispatchEvent(event);
+        }
+
+        function fireSlideChanged(previousSlide, currentSlide) {
+          fireSlideEnter();
+
+          // dispatch for shiny
+          if (window.jQuery) {
+            if (previousSlide) {
+              window.jQuery(previousSlide).trigger("hidden");
+            }
+            if (currentSlide) {
+              window.jQuery(currentSlide).trigger("shown");
+            }
+          }
+        }
+
+        // hookup for slidy
+        if (window.w3c_slidy) {
+          window.w3c_slidy.add_observer(function (slide_num) {
+            // slide_num starts at position 1
+            fireSlideChanged(null, w3c_slidy.slides[slide_num - 1]);
+          });
+        }
+
+      })();
+    </script>
+
+    <script id="quarto-html-after-body" type="application/javascript">
+    window.document.addEventListener("DOMContentLoaded", function (event) {
+      const toggleBodyColorMode = (bsSheetEl) => {
+        const mode = bsSheetEl.getAttribute("data-mode");
+        const bodyEl = window.document.querySelector("body");
+        if (mode === "dark") {
+          bodyEl.classList.add("quarto-dark");
+          bodyEl.classList.remove("quarto-light");
+        } else {
+          bodyEl.classList.add("quarto-light");
+          bodyEl.classList.remove("quarto-dark");
+        }
+      }
+      const toggleBodyColorPrimary = () => {
+        const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+        if (bsSheetEl) {
+          toggleBodyColorMode(bsSheetEl);
+        }
+      }
+      toggleBodyColorPrimary();  
+      const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+      tabsets.forEach(function(tabset) {
+        const tabby = new Tabby('#' + tabset.id);
+      });
+      const isCodeAnnotation = (el) => {
+        for (const clz of el.classList) {
+          if (clz.startsWith('code-annotation-')) {                     
+            return true;
+          }
+        }
+        return false;
+      }
+      const onCopySuccess = function(e) {
+        // button target
+        const button = e.trigger;
+        // don't keep focus
+        button.blur();
+        // flash "checked"
+        button.classList.add('code-copy-button-checked');
+        var currentTitle = button.getAttribute("title");
+        button.setAttribute("title", "Copied!");
+        let tooltip;
+        if (window.bootstrap) {
+          button.setAttribute("data-bs-toggle", "tooltip");
+          button.setAttribute("data-bs-placement", "left");
+          button.setAttribute("data-bs-title", "Copied!");
+          tooltip = new bootstrap.Tooltip(button, 
+            { trigger: "manual", 
+              customClass: "code-copy-button-tooltip",
+              offset: [0, -8]});
+          tooltip.show();    
+        }
+        setTimeout(function() {
+          if (tooltip) {
+            tooltip.hide();
+            button.removeAttribute("data-bs-title");
+            button.removeAttribute("data-bs-toggle");
+            button.removeAttribute("data-bs-placement");
+          }
+          button.setAttribute("title", currentTitle);
+          button.classList.remove('code-copy-button-checked');
+        }, 1000);
+        // clear code selection
+        e.clearSelection();
+      }
+      const getTextToCopy = function(trigger) {
+          const codeEl = trigger.previousElementSibling.cloneNode(true);
+          for (const childEl of codeEl.children) {
+            if (isCodeAnnotation(childEl)) {
+              childEl.remove();
+            }
+          }
+          return codeEl.innerText;
+      }
+      const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+        text: getTextToCopy
+      });
+      clipboard.on('success', onCopySuccess);
+      if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+        const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+          text: getTextToCopy,
+          container: window.document.getElementById('quarto-embedded-source-code-modal')
+        });
+        clipboardModal.on('success', onCopySuccess);
+      }
+        var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+        var mailtoRegex = new RegExp(/^mailto:/);
+          var filterRegex = new RegExp('/' + window.location.host + '/');
+        var isInternal = (href) => {
+            return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+        }
+        // Inspect non-navigation links and adorn them if external
+     	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+        for (var i=0; i<links.length; i++) {
+          const link = links[i];
+          if (!isInternal(link.href)) {
+            // undo the damage that might have been done by quarto-nav.js in the case of
+            // links that we want to consider external
+            if (link.dataset.originalHref !== undefined) {
+              link.href = link.dataset.originalHref;
+            }
+          }
+        }
+      function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+        const config = {
+          allowHTML: true,
+          maxWidth: 500,
+          delay: 100,
+          arrow: false,
+          appendTo: function(el) {
+              return el.closest('section.slide') || el.parentElement;
+          },
+          interactive: true,
+          interactiveBorder: 10,
+          theme: 'light-border',
+          placement: 'bottom-start',
+        };
+        if (contentFn) {
+          config.content = contentFn;
+        }
+        if (onTriggerFn) {
+          config.onTrigger = onTriggerFn;
+        }
+        if (onUntriggerFn) {
+          config.onUntrigger = onUntriggerFn;
+        }
+          config['offset'] = [0,0];
+          config['maxWidth'] = 700;
+        window.tippy(el, config); 
+      }
+      const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+      for (var i=0; i<noterefs.length; i++) {
+        const ref = noterefs[i];
+        tippyHover(ref, function() {
+          // use id or data attribute instead here
+          let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+          try { href = new URL(href).hash; } catch {}
+          const id = href.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note) {
+            return note.innerHTML;
+          } else {
+            return "";
+          }
+        });
+      }
+      const findCites = (el) => {
+        const parentEl = el.parentElement;
+        if (parentEl) {
+          const cites = parentEl.dataset.cites;
+          if (cites) {
+            return {
+              el,
+              cites: cites.split(' ')
+            };
+          } else {
+            return findCites(el.parentElement)
+          }
+        } else {
+          return undefined;
+        }
+      };
+      var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+      for (var i=0; i<bibliorefs.length; i++) {
+        const ref = bibliorefs[i];
+        const citeInfo = findCites(ref);
+        if (citeInfo) {
+          tippyHover(citeInfo.el, function() {
+            var popup = window.document.createElement('div');
+            citeInfo.cites.forEach(function(cite) {
+              var citeDiv = window.document.createElement('div');
+              citeDiv.classList.add('hanging-indent');
+              citeDiv.classList.add('csl-entry');
+              var biblioDiv = window.document.getElementById('ref-' + cite);
+              if (biblioDiv) {
+                citeDiv.innerHTML = biblioDiv.innerHTML;
+              }
+              popup.appendChild(citeDiv);
+            });
+            return popup.innerHTML;
+          });
+        }
+      }
+    });
+    </script>
+    
+
+</body></html>

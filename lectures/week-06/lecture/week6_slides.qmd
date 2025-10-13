@@ -1,0 +1,2031 @@
+---
+title: "Spatial Machine Learning & Advanced Regression"
+subtitle: "Week 6: MUSA 5080"
+author: "Dr. Elizabeth Delmelle"
+date: "October 14, 2025"
+format: 
+  revealjs:
+    theme: simple
+    slide-number: true
+    chalkboard: true
+    code-line-numbers: true
+    incremental: false
+    smaller: true
+    scrollable: true
+---
+
+# Today's Journey
+
+## What We'll Cover
+
+::: {.columns}
+::: {.column width="50%"}
+**Warm-Up: Build a Baseline Model**
+
+- Quick review of Week 5 regression
+- Create simple structural model
+- Identify its limitations
+
+**Part 1: Expanding Your Toolkit**
+
+- Categorical variables
+- Interactions
+- Polynomial terms
+:::
+
+::: {.column width="50%"}
+**Part 2: Why Space Matters**
+
+- Hedonic model framework
+- Tobler's First Law
+- Spatial autocorrelation
+
+**Part 3: Creating Spatial Features**
+
+- Buffer aggregation
+- k-Nearest Neighbors
+- Distance to amenities
+:::
+:::
+
+**Part 4: Fixed Effects**
+
+
+
+---
+
+# Warm-Up: Build a Baseline Model
+
+## Let's Build Something Simple Together
+
+We'll start by creating a basic model using **only structural features** - this will be our baseline to improve upon today.
+
+```{r}
+#| eval: true
+#| echo: true
+
+# Load packages and data
+library(tidyverse)
+library(sf)
+library(here)
+
+# Load Boston housing data
+boston <- read_csv(here("data/boston.csv"))
+
+# Quick look at the data
+glimpse(boston)
+
+# Simple model: Predict price from living area
+baseline_model <- lm(SalePrice ~ LivingArea, data = boston)
+summary(baseline_model)
+```
+
+---
+
+## What Does This Model Tell Us?
+
+```{r}
+#| eval: true
+#| echo: false
+
+# Look at key statistics
+summary(baseline_model)
+
+# Calculate R-squared
+summary(baseline_model)$r.squared
+
+# Visualize the relationship
+ggplot(boston, aes(x = LivingArea, y = SalePrice)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Simple Linear Model: Living Area → Price",
+       x = "Living Area (sq ft)",
+       y = "Sale Price ($)") +
+  scale_y_continuous(labels = scales::dollar) +
+  theme_minimal()
+```
+
+---
+
+## Interpreting Our Baseline
+
+**Expected Output:**
+
+| Variable | Coefficient | Std. Error | t-value | p-value |
+|----------|-------------|------------|---------|---------|
+| Intercept | 157968.32 | 35855.59  | 4.406 | <0.001 |
+| LivingArea | 216.54 | 14.47 | 14.969 | <0.001 |
+
+**What this means:**
+
+- Base price (0 sq ft) ≈ 157968.32
+- Each additional square foot adds ~216 to price
+- Relationship is statistically significant (p < 0.001)
+- But R² is only **0.13** (13% of variation explained)
+
+::: {.callout-important}
+## The Problem
+**MOST of the variation in house prices is still unexplained!**
+
+What are we missing? 🤔
+:::
+
+---
+
+## Limitations of This Model
+
+::: {.callout-warning}
+## What's Missing?
+
+1. **What does this model ignore?**
+   - Location! (North End vs. Roxbury vs. Back Bay)
+   - Proximity to downtown, waterfront, parks
+   - Nearby crime levels
+   - School quality
+   - Neighborhood characteristics
+
+2. **Why might it fail?**
+   - 1,000 sq ft in Back Bay ≠ 1,000 sq ft in Roxbury
+   - Same house, different locations → vastly different prices
+   - "Location, location, location!"
+
+3. **How could we improve it?**
+   - Add spatial features (crime nearby, distance to amenities)
+   - Control for neighborhood (fixed effects)
+   - Include interactions (does size matter more in wealthy areas?)
+:::
+
+**This is exactly where spatial features come in!**
+
+---
+
+## Let's Add One More Feature
+
+```{r}
+#| eval: true
+#| echo: true
+
+# Add number of bathrooms
+better_model <- lm(SalePrice ~ LivingArea + R_FULL_BTH, data = boston)
+summary(better_model)
+
+# Compare models
+cat("Baseline R²:", summary(baseline_model)$r.squared, "\n")
+cat("With bathrooms R²:", summary(better_model)$r.squared, "\n")
+```
+
+**R² improves a smidge... but still missing location!**
+
+::: {.callout-note}
+## Today's Goal
+By the end of class, you'll build models that:
+- Incorporate spatial relationships
+- Account for neighborhood effects  
+- Achieve much better prediction accuracy
+- Help you understand what drives housing prices
+:::
+
+---
+
+## Converting to Spatial Data
+
+### Step 1: Make your data spatial
+
+```{r}
+#| eval: true
+#| echo: true
+
+library(sf)
+
+# Convert boston data to sf object
+boston.sf <- boston %>%
+  st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) %>%
+  st_transform('ESRI:102286')  # MA State Plane (feet)
+
+# Check it worked
+head(boston.sf)
+class(boston.sf)  # Should show "sf" and "data.frame"
+```
+
+::: {.callout-tip}
+### Why transform CRS?
+- **4326** = WGS84 (lat/lon in degrees) - fine for display
+- **ESRI:102286** = MA State Plane (feet) - good for distance calculations
+:::
+
+---
+
+## Step 2: Spatial Join with Neighborhoods
+
+```{r}
+#| eval: true
+#| echo: true
+
+# Load neighborhood boundaries
+nhoods <- read_sf(here("data/BPDA_Neighborhood_Boundaries.geojson")) %>%
+  st_transform('ESRI:102286')  # Match CRS!
+
+# Check the neighborhoods
+head(nhoods)
+nrow(nhoods)  # How many neighborhoods?
+
+# Spatial join: Assign each house to its neighborhood
+boston.sf <- boston.sf %>%
+  st_join(nhoods, join = st_intersects)
+
+# Check results
+boston.sf %>%
+  st_drop_geometry() %>%
+  count(name) %>%
+  arrange(desc(n))
+```
+
+::: {.callout-important}
+### What just happened?
+`st_join()` found which neighborhood polygon contains each house point!
+:::
+
+---
+
+## Visualize: Prices by Neighborhood
+
+```{r}
+#| eval: true
+#| echo: false
+
+# Map neighborhoods with median prices
+price_by_nhood <- boston.sf %>%
+  st_drop_geometry() %>%
+  group_by(name) %>%
+  summarize(
+    median_price = median(SalePrice, na.rm = TRUE),
+    n_sales = n()
+  )
+
+# Join back to spatial data
+nhoods_prices <- nhoods %>%
+  left_join(price_by_nhood, by = "name")
+
+# Create custom price classes
+nhoods_prices <- nhoods_prices %>%
+  mutate(
+    price_class = cut(median_price,
+                     breaks = c(0, 400000, 600000, 800000, 1000000, Inf),
+                     labels = c("Under $400k", "$400k-$600k", "$600k-$800k", 
+                               "$800k-$1M", "Over $1M"),
+                     include.lowest = TRUE)
+  )
+
+
+# YlOrRd (Yellow-Orange-Red) - classic graduated
+ggplot() +
+  geom_sf(data = nhoods_prices, aes(fill = price_class), 
+          color = "white", size = 0.5) +
+  scale_fill_brewer(
+    name = "Median Price",
+    palette = "YlOrRd",  # Try also: "Reds", "OrRd", "YlGnBu", "PuRd"
+    na.value = "grey90",
+    direction = 1  # Use -1 to reverse (dark = low)
+  ) +
+  labs(
+    title = "Median Home Prices by Boston Neighborhood",
+  ) +
+  theme_void() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold", size = 14),
+    legend.title = element_text(face = "bold")
+  )
+```
+
+---
+
+## The Spatial Pattern is Clear!
+
+```{r}
+#| eval: true
+#| echo: true
+
+# Which neighborhoods are most expensive?
+price_by_nhood %>%
+  arrange(desc(median_price)) %>%
+  head(5)
+
+# Which have most sales?
+price_by_nhood %>%
+  arrange(desc(n_sales)) %>%
+  head(5)
+```
+
+::: {.callout-note}
+## Discussion Question
+Why do you think certain neighborhoods command higher prices?
+- Proximity to downtown?
+- Historical character?
+- School quality?
+- Safety?
+- All of the above?
+
+**This is why we need spatial features and neighborhood controls!**
+:::
+
+---
+
+# Part 1: Expanding Your Regression Toolkit {background-color="#667eea"}
+
+---
+
+## Beyond Continuous Variables
+
+::: {.columns}
+::: {.column width="50%"}
+### ✅ Continuous Variables
+- Square footage
+- Age of house
+- Income levels
+- Distance to downtown
+:::
+
+::: {.column width="50%"}
+### 🏷️ Categorical Variables
+- Neighborhood
+- School district
+- Building type
+- Has garage? (Yes/No)
+:::
+:::
+---
+
+## Dummy Variables
+
+### Our Boston Data: `name` variable from spatial join
+Neighborhoods in our dataset (showing just a few):
+
+```{r}
+#| eval: true
+#| echo: false
+
+# See what neighborhoods we have
+boston.sf %>%
+  st_drop_geometry() %>%
+  count(name) %>%
+  arrange(desc(n)) %>%
+  head(10)
+```
+
+**How R Handles This**
+
+When you include `name` in a model, R automatically creates binary indicators:
+
+- **Back_Bay:** 1 if Back Bay, 0 otherwise
+- **Beacon_Hill:** 1 if Beacon Hill, 0 otherwise
+- **Charlestown:** 1 if Charlestown, 0 otherwise
+- ...and so on for all neighborhoods
+
+::: {.callout-warning}
+### ⚠️ The (n-1) Rule
+One neighborhood is automatically chosen as the **reference category** (omitted)!
+
+R picks the first alphabetically unless you specify otherwise.
+:::
+
+---
+
+## Add Dummy (Categorical) Variables to the Model
+
+```{r}
+#| eval: true
+#| echo: true
+
+# Ensure name is a factor
+boston.sf <- boston.sf %>%
+  mutate(name = as.factor(name))
+
+# Check which is reference (first alphabetically)
+levels(boston.sf$name)[1]
+
+# Fit model with neighborhood fixed effects
+model_neighborhoods <- lm(SalePrice ~ LivingArea + name, 
+                          data = boston.sf)
+
+# Show just first 10 coefficients
+summary(model_neighborhoods)$coef[1:10, ]
+```
+
+```{r}
+#| eval: true
+#| echo: false
+
+# CREATE OBJECTS NEEDED FOR LATER SLIDES
+# Fit model with neighborhoods and bedrooms for predictions
+model_with_neighborhoods <- lm(SalePrice ~ LivingArea + R_FULL_BTH + name, 
+                                data = boston.sf)
+
+# Get reference neighborhood
+ref_neighborhood <- levels(boston.sf$name)[1]
+
+# Extract and format key coefficients
+library(broom)
+coef_table <- tidy(model_with_neighborhoods) %>%
+  filter(term %in% c("(Intercept)", "LivingArea", "R_BDRMS", 
+                     "nameBack Bay", "nameBeacon Hill", "nameCharlestown",
+                     "nameDorchester", "nameRoxbury", "nameEast Boston")) %>%
+  mutate(
+    term = case_when(
+      term == "(Intercept)" ~ paste0("Intercept (", ref_neighborhood, ")"),
+      term == "LivingArea" ~ "Living Area (per sq ft)",
+      term == "R_BDRMS" ~ "Bedrooms",
+      str_detect(term, "name") ~ str_remove(term, "name"),
+      TRUE ~ term
+    ),
+    estimate = scales::dollar(estimate, accuracy = 1),
+    p_value = case_when(
+      p.value < 0.001 ~ "< 0.001***",
+      p.value < 0.01 ~ paste0(round(p.value, 3), "**"),
+      p.value < 0.05 ~ paste0(round(p.value, 3), "*"),
+      TRUE ~ as.character(round(p.value, 3))
+    )
+  ) %>%
+  select(Variable = term, Coefficient = estimate, `p-value` = p_value)
+```
+
+
+---
+
+## Interpreting Neighborhood Dummy Variables
+
+```{r}
+#| eval: true
+#| echo: false
+
+# Display the coefficient table
+knitr::kable(coef_table, align = c('l', 'r', 'r'))
+```
+
+
+### How to Read This Table
+
+**Reference Category:** Allston (automatically chosen - alphabetically first)
+
+**Structural Variables:**
+
+- **Living Area:** Each additional sq ft adds this amount (same for all neighborhoods)
+- **Bedrooms:** Effect of one more full bathroom (same for all neighborhoods)
+
+**Neighborhood Dummies:**
+
+- **Positive coefficient** = This neighborhood is MORE expensive than `r ref_neighborhood`
+- **Negative coefficient** = This neighborhood is LESS expensive than `r ref_neighborhood`
+- All else equal (same size, same bathrooms)
+
+
+---
+
+## Concrete Example: Comparing Two Houses
+
+Using our model, let's compare identical houses in different neighborhoods:
+
+::: {.columns}
+::: {.column width="50%"}
+### House A: Back Bay
+- Living Area: 1,500 sq ft
+- Baths: 2
+- **Neighborhood:** Back Bay
+
+**Predicted Price:**
+```{r}
+#| eval: true
+#| echo: false
+
+# Fit model with neighborhoods (reference = alphabetically first)
+boston.sf <- boston.sf %>%
+  mutate(name = as.factor(name))
+
+model_with_neighborhoods <- lm(SalePrice ~ LivingArea + R_FULL_BTH + name, 
+                                data = boston.sf)
+
+# Get reference neighborhood
+ref_neighborhood <- levels(boston.sf$name)[1]
+
+# Extract and format key coefficients
+library(broom)
+coef_table <- tidy(model_with_neighborhoods) %>%
+  filter(term %in% c("(Intercept)", "LivingArea", "R_FULL_BTH", 
+                     "nameBack Bay", "nameBeacon Hill", "nameCharlestown",
+                     "nameDorchester", "nameRoxbury", "nameEast Boston")) %>%
+  mutate(
+    term = case_when(
+      term == "(Intercept)" ~ paste0("Intercept (", ref_neighborhood, ")"),
+      term == "LivingArea" ~ "Living Area (per sq ft)",
+      term == "R_FULL_BTH" ~ "Full Baths",
+      str_detect(term, "name") ~ str_remove(term, "name"),
+      TRUE ~ term
+    ),
+    estimate = scales::dollar(estimate, accuracy = 1),
+    p_value = case_when(
+      p.value < 0.001 ~ "< 0.001***",
+      p.value < 0.01 ~ paste0(round(p.value, 3), "**"),
+      p.value < 0.05 ~ paste0(round(p.value, 3), "*"),
+      TRUE ~ as.character(round(p.value, 3))
+    )
+  ) %>%
+  select(Variable = term, Coefficient = estimate, `p-value` = p_value)
+
+#knitr::kable(coef_table, align = c('l', 'r', 'r'))
+```
+
+```{r}
+#| eval: true
+#| echo: false
+
+# Example prediction for Back Bay
+predict(model_with_neighborhoods, 
+        newdata = data.frame(
+          LivingArea = 1500,
+          R_FULL_BTH = 2,
+          name = factor("Back Bay", levels = levels(boston.sf$name))
+        )) %>%
+  scales::dollar()
+```
+
+
+:::
+::: {.column width="50%"}
+### House B: Roxbury
+- Living Area: 1,500 sq ft
+- Baths: 2
+- **Neighborhood:** Roxbury
+
+**Predicted Price:**
+```{r}
+#| eval: true
+#| echo: false
+
+# Example prediction for Roxbury
+predict(model_with_neighborhoods, 
+        newdata = data.frame(
+          LivingArea = 1500,
+          R_FULL_BTH = 2,
+          name = factor("Roxbury", levels = levels(boston.sf$name))
+        )) %>%
+  scales::dollar()
+```
+:::
+:::
+::: {.callout-important}
+
+The Neighborhood Effect
+Price Difference
+```{r}
+#| eval: true
+#| echo: false
+
+price_backbay <- predict(model_with_neighborhoods, 
+                          newdata = data.frame(LivingArea = 1500, R_FULL_BTH  = 2,
+                                               name = factor("Back Bay", levels = levels(boston.sf$name))))
+
+price_roxbury <- predict(model_with_neighborhoods, 
+                          newdata = data.frame(LivingArea = 1500, R_FULL_BTH  = 2,
+                                               name = factor("Roxbury", levels = levels(boston.sf$name))))
+
+scales::dollar(price_backbay - price_roxbury)
+```
+
+Same house, different location = huge price difference! This is what the neighborhood dummies capture.
+:::
+---
+
+## Interaction Effects: When Relationships Depend
+
+### The Question
+
+Does the effect of one variable **depend on** the level of another variable?
+
+### Example Scenarios
+
+- **Housing:** Does square footage matter more in wealthy neighborhoods?
+- **Education:** Do tutoring effects vary by initial skill level?
+- **Public Health:** Do pollution effects differ by age?
+
+::: {.callout-important}
+### Mathematical Form
+SalePrice = β₀ + β₁(LivingArea) + β₂(WealthyNeighborhood) + 
+**β₃(LivingArea × WealthyNeighborhood)** + ε
+:::
+
+**Today's example:** Is the value of square footage the same across all Boston neighborhoods?
+
+---
+
+## Theory: Luxury Premium Hypothesis
+
+::: {.columns}
+::: {.column width="50%"}
+### 🏛️ In Wealthy Neighborhoods
+(Back Bay, Beacon Hill, South End)
+
+- High-end buyers pay premium for space
+- Luxury finishes, location prestige
+- Each sq ft adds substantial value
+- **Steep slope**
+
+**Hypothesis:** $300+ per sq ft
+:::
+
+::: {.column width="50%"}
+### 🏘️ In Working-Class Neighborhoods
+(Dorchester, Mattapan, East Boston)
+
+- Buyers value function over luxury
+- More price-sensitive market
+- Space matters, but less premium
+- **Flatter slope**
+
+**Hypothesis:** $100-150 per sq ft
+:::
+:::
+
+::: {.callout-note}
+### The Key Question
+If we assume one slope for all neighborhoods, are we misunderstanding the market?
+:::
+
+---
+
+## Create the Neighborhood Categories
+```{r}
+#| eval: true
+#| echo: true
+
+# Define wealthy neighborhoods based on median prices
+wealthy_hoods <- c("Back Bay", "Beacon Hill", "South End", "Bay Village")
+
+# Create binary indicator
+boston.sf <- boston.sf %>%
+  mutate(
+    wealthy_neighborhood = ifelse(name %in% wealthy_hoods, "Wealthy", "Not Wealthy"),
+    wealthy_neighborhood = as.factor(wealthy_neighborhood)
+  )
+
+# Check the split
+boston.sf %>%
+  st_drop_geometry() %>%
+  count(wealthy_neighborhood)
+```
+
+---
+
+## Model 1: No Interaction (Parallel Slopes)
+
+```{r}
+#| eval: true
+#| echo: true
+
+# Model assumes same slope everywhere
+model_no_interact <- lm(SalePrice ~ LivingArea + wealthy_neighborhood, 
+                        data = boston.sf)
+
+summary(model_no_interact)$coef
+```
+::: {.callout-warning}
+What This Assumes
+
+Living area has the same effect in all neighborhoods
+Only the intercept differs (wealthy areas start higher)
+Parallel lines on a plot
+:::
+
+---
+
+## Model 2: With Interaction (Different Slopes)
+
+```{r}
+#| eval: true
+#| echo: true
+
+# Model allows different slopes
+model_interact <- lm(SalePrice ~ LivingArea * wealthy_neighborhood, 
+                     data = boston.sf)
+
+summary(model_interact)$coef
+```
+::: {.callout-important}
+What This Allows
+
+Living area can have different effects in different neighborhoods
+Both intercept AND slope differ
+Non-parallel lines on a plot
+:::
+---
+
+## Interpreting the Interaction Coefficients
+
+```{r}
+#| eval: true
+#| echo: false
+
+# Format results nicely
+library(broom)
+interact_results <- tidy(model_interact) %>%
+  mutate(
+    term_clean = case_when(
+      term == "(Intercept)" ~ "Intercept (Not Wealthy)",
+      term == "LivingArea" ~ "Living Area (Not Wealthy)",
+      term == "wealthy_neighborhoodWealthy" ~ "Wealthy Neighborhood Premium",
+      term == "LivingArea:wealthy_neighborhoodWealthy" ~ "Extra $/sq ft in Wealthy Areas",
+      TRUE ~ term
+    ),
+    estimate_formatted = scales::dollar(estimate, accuracy = 1),
+    significance = case_when(
+      p.value < 0.001 ~ "***",
+      p.value < 0.01 ~ "**",
+      p.value < 0.05 ~ "*",
+      TRUE ~ ""
+    )
+  ) %>%
+  select(Term = term_clean, Coefficient = estimate_formatted, 
+         `t-value` = statistic, `p-value` = p.value, Sig = significance)
+
+knitr::kable(interact_results, digits = 3, align = c('l', 'r', 'r', 'r', 'c'))
+```
+
+
+*We get the un-intuitive negative premium here because that is an intercept adjustment (applies at 0 sqft). The slope difference (+985sq/ft) is huge - we can calculate when wealthy areas become more expensive (at what sq ft) = 384.*
+
+---
+
+## Breaking Down the Coefficients
+
+```{r}
+#| eval: true
+#| echo: false
+
+# Extract coefficients
+coefs <- coef(model_interact)
+base_intercept <- coefs[1]
+base_slope <- coefs[2]
+wealthy_intercept_add <- coefs[3]
+wealthy_slope_add <- coefs[4]
+
+# Calculate totals
+wealthy_intercept <- base_intercept + wealthy_intercept_add
+wealthy_slope <- base_slope + wealthy_slope_add
+```
+
+::: {.columns}
+::: {.column width="50%"}
+🏘️ Not Wealthy Areas
+Equation:
+Price = `r scales::dollar(base_intercept, accuracy = 1)` +
+`r scales::dollar(base_slope, accuracy = 1)` × LivingArea
+Interpretation:
+
+Base price: `r scales::dollar(base_intercept, accuracy = 1)`
+Each sq ft adds: `r scales::dollar(base_slope, accuracy = 1)`
+:::
+
+::: {.column width="50%"}
+🏛️ Wealthy Areas
+Equation:
+Price = `r scales::dollar(wealthy_intercept, accuracy = 1)` +
+`r scales::dollar(wealthy_slope, accuracy = 1)` × LivingArea
+Interpretation:
+
+Base price: `r scales::dollar(wealthy_intercept, accuracy = 1)`
+Each sq ft adds: `r scales::dollar(wealthy_slope, accuracy = 1)`
+:::
+:::
+
+::: {.callout-important}
+The Interaction Effect
+Wealthy areas value each sq ft `r scales::dollar(wealthy_slope_add, accuracy = 1)` more than non-wealthy areas!
+:::
+---
+
+## Visualizing the Interaction Effect
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-width: 10
+#| fig-height: 6
+
+library(ggplot2)
+
+ggplot(boston.sf, aes(x = LivingArea, y = SalePrice, 
+                      color = wealthy_neighborhood)) +
+  geom_point(alpha = 0.3, size = 2) +
+  geom_smooth(method = "lm", se = TRUE, linewidth = 1.5) +
+  scale_color_manual(
+    values = c("Not Wealthy" = "#3498db", "Wealthy" = "#e74c3c"),
+    name = "Neighborhood Type"
+  ) +
+  scale_y_continuous(labels = scales::dollar_format(scale = 1/1000000, suffix = "M")) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(
+    title = "Living Area Effect Varies by Neighborhood Wealth",
+    subtitle = "Different slopes = interaction effect (steeper line in wealthy areas)",
+    x = "Living Area (sq ft)",
+    y = "Sale Price",
+    caption = "Notice: The red line (wealthy) is steeper than the blue line (not wealthy)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(face = "bold", size = 14)
+  )
+```
+
+Key Observation: The lines are NOT parallel - that's the interaction!
+
+---
+
+## Compare Model Performance
+
+```{r}
+#| eval: true
+#| echo: true
+
+# Compare R-squared
+cat("Model WITHOUT interaction R²:", round(summary(model_no_interact)$r.squared, 4), "\n")
+cat("Model WITH interaction R²:", round(summary(model_interact)$r.squared, 4), "\n")
+cat("Improvement:", round(summary(model_interact)$r.squared - summary(model_no_interact)$r.squared, 4), "\n")
+```
+
+```{r}
+#| eval: true
+#| echo: false
+
+# Calculate improvement
+r2_improvement <- summary(model_interact)$r.squared - summary(model_no_interact)$r.squared
+r2_pct_improvement <- (r2_improvement / summary(model_no_interact)$r.squared) * 100
+```
+
+::: {.callout-important}
+Model Improvement
+Adding the interaction improves R² by `r round(r2_improvement, 4)`
+(a `r round(r2_pct_improvement, 1)`% relative improvement)
+
+Interpretation: We explain `r round(r2_improvement * 100, 2)`% more variation in prices by allowing different slopes!
+:::
+
+---
+
+## Policy Implications
+
+::: {.callout-warning}
+## What This Tells Us About Boston's Housing Market
+
+1. Market Segmentation: Boston operates as TWO distinct housing markets
+
+- Luxury market: Every sq ft is premium ($`r round(wealthy_slope, 0)`/sq ft)
+- Standard market: Space valued, but lower premium ($`r round(base_slope, 0)`/sq ft)
+
+2. Affordability Crisis: The interaction amplifies inequality
+
+- Large homes in wealthy areas become exponentially more expensive
+- Creates barriers to mobility between neighborhoods
+
+3. Policy Design: One-size-fits-all policies may fail
+
+- Property tax assessments should account for neighborhood-specific valuation
+- Housing assistance needs vary dramatically by area
+:::
+
+---
+
+## When Not To Use Interactions
+
+::: {.callout-warning}
+When NOT to Use Interactions: 
+
+- Small samples: Need sufficient data in each group
+- Overfitting: Too many interactions make models unstable
+:::
+
+---
+
+## Polynomial Terms: Non-Linear Relationships
+
+### When Straight Lines Don't Fit
+
+::: {.columns}
+::: {.column width="50%"}
+**Signs of Non-Linearity:**
+
+- Curved residual plots
+- Diminishing returns
+- Accelerating effects
+- U-shaped or inverted-U patterns
+- Theoretical reasons
+:::
+
+::: {.column width="50%"}
+**Examples:**
+
+- House age: depreciation then vintage premium
+- Test scores: plateau after studying
+- Advertising: diminishing returns
+- Crime prevention: early gains, then plateaus
+:::
+:::
+
+::: {.callout-important}
+### Polynomial Regression
+SalePrice = β₀ + β₁(Age) + β₂(Age²) + ε
+
+This allows for a **curved relationship**
+:::
+
+---
+
+## Theory: The U-Shaped Age Effect
+
+### Why Would Age Have a Non-Linear Effect?
+
+::: {.columns}
+::: {.column width="33%"}
+### 🏗️ New Houses
+(0-20 years)
+
+- Modern amenities
+- Move-in ready
+- No repairs needed
+- **High value**
+- Steep depreciation initially
+:::
+
+::: {.column width="33%"}
+### 🏠 Middle-Aged
+(20-80 years)
+
+- Needs updates
+- Wear and tear
+- Not yet "historic"
+- **Lowest value**
+- Trough of the curve
+:::
+
+::: {.column width="33%"}
+### 🏛️ Historic/Vintage
+(80+ years)
+
+- Architectural character
+- Historic districts
+- Prestige value
+- **Rising value**
+- "Vintage premium"
+:::
+:::
+
+::: {.callout-note}
+### Boston Context
+Boston has LOTS of historic homes (Back Bay, Beacon Hill built 1850s-1900s). Does age create a U-shaped curve?
+:::
+## Create Age Variable
+```{r}
+#| eval: true
+#| echo: true
+
+# Calculate age from year built
+boston.sf <- boston.sf %>%
+  mutate(Age = 2025 - YR_BUILT)%>% filter(Age <2000)
+
+
+# Check the distribution of age
+summary(boston.sf$Age)
+
+# Visualize age distribution
+ggplot(boston.sf, aes(x = Age)) +
+  geom_histogram(bins = 30, fill = "steelblue", alpha = 0.7) +
+  labs(title = "Distribution of House Age in Boston",
+       x = "Age (years)",
+       y = "Count") +
+  theme_minimal()
+```
+---
+
+## First: Linear Model (Baseline)
+
+```{r}
+#| eval: true
+#| echo: true
+
+# Simple linear relationship
+model_age_linear <- lm(SalePrice ~ Age + LivingArea, data = boston.sf)
+
+summary(model_age_linear)$coef
+```
+Interpretation: Each additional year of age changes price by $2834.01 (assumed constant rate)
+
+---
+
+## Visualize: Is the relationship Linear?
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-width: 10
+#| fig-height: 5
+
+# Plot with linear fit
+ggplot(boston.sf, aes(x = Age, y = SalePrice)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm", color = "red", se = TRUE) +
+  geom_smooth(method = "loess", color = "blue", se = FALSE) +
+  scale_y_continuous(labels = scales::dollar_format(scale = 1/1000, suffix = "k")) +
+  labs(
+    title = "House Age vs. Price: Linear (red) vs. Flexible Curve (blue)",
+    x = "Age (years)",
+    y = "Sale Price",
+    caption = "Red = linear assumption, Blue = data-driven curve"
+  ) +
+  theme_minimal()
+```
+---
+
+## Add Polynomial Term: Age Squared
+
+```{r}
+#| eval: true
+#| echo: true
+
+# Quadratic model (Age²)
+model_age_quad <- lm(SalePrice ~ Age + I(Age^2) + LivingArea, data = boston.sf)
+
+summary(model_age_quad)$coef
+```
+::: {.callout-important}
+The I() Function
+Why I(Age^2) instead of just Age^2?
+In R formulas, ^ has special meaning. I() tells R: "interpret this literally, compute Age²"
+Without I(): R would interpret it differently in the formula
+:::
+
+---
+
+## Interpreting Polynomial Coefficients
+
+```{r}
+#| eval: true
+#| echo: false
+
+# Extract coefficients
+coefs_quad <- coef(model_age_quad)
+beta_age <- coefs_quad["Age"]
+beta_age2 <- coefs_quad["I(Age^2)"]
+```
+
+Model equation:
+Price = `r scales::dollar(coefs_quad[1], accuracy = 1)` +
+`r scales::dollar(beta_age, accuracy = 1)`×Age +
+`r scales::dollar(beta_age2, accuracy = 2)`×Age² +
+`r scales::dollar(coefs_quad["LivingArea"], accuracy = 1)`×LivingArea
+
+::: {.callout-warning}
+⚠️ Can't Interpret Coefficients Directly!
+
+With Age², the effect of age is no longer constant. You need to calculate the marginal effect.
+Marginal effect of Age = β₁ + 2×β₂×Age
+This means the effect changes at every age!
+:::
+
+---
+
+## Compare Model Performance
+
+```{r}
+#| eval: true
+#| echo: true
+
+# R-squared comparison
+r2_linear <- summary(model_age_linear)$r.squared
+r2_quad <- summary(model_age_quad)$r.squared
+
+cat("Linear model R²:", round(r2_linear, 4), "\n")
+cat("Quadratic model R²:", round(r2_quad, 4), "\n")
+cat("Improvement:", round(r2_quad - r2_linear, 4), "\n\n")
+
+# F-test: Is the Age² term significant?
+anova(model_age_linear, model_age_quad)
+```
+---
+
+## Check Residual Plot
+
+```{r}
+#| eval: true
+#| echo: true
+#| fig-width: 10
+#| fig-height: 5
+
+# Compare residual plots
+par(mfrow = c(1, 2))
+
+# Linear model residuals
+plot(fitted(model_age_linear), residuals(model_age_linear),
+     main = "Linear Model Residuals",
+     xlab = "Fitted Values", ylab = "Residuals")
+abline(h = 0, col = "red", lty = 2)
+
+# Quadratic model residuals  
+plot(fitted(model_age_quad), residuals(model_age_quad),
+     main = "Quadratic Model Residuals",
+     xlab = "Fitted Values", ylab = "Residuals")
+abline(h = 0, col = "red", lty = 2)
+```
+---
+
+# Part 3: Creating Spatial Features  {background-color="#667eea"}
+
+---
+
+## Why Space Matters for Housing Prices
+
+### Tobler's First Law of Geography
+
+::: {.callout-note icon=false appearance="simple"}
+# "Everything is related to everything else, but near things are more related than distant things"
+*- Waldo Tobler, 1970*
+:::
+
+### What This Means for House Prices
+
+- Crime **nearby** matters more than crime across the city
+- Parks **within walking distance** affect value
+- Your **immediate neighborhood** defines your market
+
+::: {.callout-important}
+### The Challenge
+
+How do we quantify "nearbyness" in a way our regression model can use?
+
+**Answer:** Create spatial features that measure proximity to amenities/disamenities
+:::
+
+---
+
+## Three Approaches to Spatial Features
+
+### 1️⃣ Buffer Aggregation
+**Count or sum** events within a defined distance
+
+*Example: Number of crimes within 500 feet*
+
+### 2️⃣ k-Nearest Neighbors (kNN)
+**Average distance** to k closest events
+
+*Example: Average distance to 3 nearest violent crimes*
+
+### 3️⃣ Distance to Specific Points
+**Straight-line distance** to important locations
+
+*Example: Distance to downtown, nearest T station*
+
+::: {.callout-tip}
+**Today:** We'll create all three types using Boston crime data!
+:::
+
+---
+
+## Load and Prepare Crime Data
+
+```{r}
+#| eval: true
+#| echo: false
+
+# load data
+bostonCrimes <- read_csv(here("data/bostonCrimes.csv"))
+glimpse(bostonCrimes)
+boston.sf <- boston %>% 
+  st_as_sf(coords = c("Longitude", "Latitude"), crs = "EPSG:4326") %>%
+  st_transform('ESRI:102286')
+
+crimes.sf <- bostonCrimes %>%
+  filter(UCR_PART == "Part One", Lat > -1, !is.na(Lat), !is.na(Long)) %>%
+  st_as_sf(coords = c("Long", "Lat"), crs = "EPSG:4326") %>%
+  st_transform('ESRI:102286') %>%
+  distinct()
+
+nhoods <- st_read(here("data/BPDA_Neighborhood_Boundaries.geojson")) %>%
+  st_transform('ESRI:102286')
+
+# Quick check - these should all be similar numbers
+st_bbox(boston.sf)
+st_bbox(crimes.sf)
+st_bbox(nhoods)
+
+
+# Check for missing coordinates
+cat("Records with missing coordinates:", 
+    sum(is.na(bostonCrimes$Lat) | is.na(bostonCrimes$Long)), "\n")
+
+# Filter to violent crimes (most relevant for housing prices)
+violent_crimes <- bostonCrimes %>%
+  filter(
+    UCR_PART == "Part One",  # Serious crimes
+    !is.na(Lat), !is.na(Long)  # Must have coordinates
+  ) %>%
+  select(OFFENSE_CODE_GROUP, OFFENSE_DESCRIPTION, SHOOTING, 
+         Lat, Long, YEAR, OCCURRED_ON_DATE)
+
+cat("Violent crime records:", nrow(violent_crimes), "\n")
+
+# What types of crimes?
+violent_crimes %>%
+  count(OFFENSE_CODE_GROUP, sort = TRUE) %>%
+  head(10)
+```
+
+---
+
+
+## Visaulize: Crime Locations
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-width: 10
+#| fig-height: 6
+
+nhoods <- st_transform(nhoods,'ESRI:102286')
+# Plot to verify alignment
+ggplot() +
+  geom_sf(data = nhoods, fill = "white", color = "gray50", size = 0.8) +
+  geom_sf(data = crimes.sf, alpha = 0.2, size = 0.3, color = "red") +
+  geom_sf(data = boston.sf, alpha = 0.3, size = 0.5, color = "blue") +
+  labs(
+    title = "Checking Spatial Alignment",
+    subtitle = "All layers should overlap - if not, CRS mismatch!",
+    caption = "Red = crimes, Blue = house sales, Gray = neighborhoods"
+  ) +
+  theme_void()
+```
+
+---
+
+## Approach 1: Buffer Aggregation
+
+```{r}
+#| eval: true
+#| echo: true
+
+# Create buffer features - these will work now that CRS is correct
+boston.sf <- boston.sf %>%
+  mutate(
+    crimes.Buffer = lengths(st_intersects(
+      st_buffer(geometry, 660),
+      crimes.sf
+    )),
+    crimes_500ft = lengths(st_intersects(
+      st_buffer(geometry, 500),
+      crimes.sf
+    ))
+  )
+
+# Check it worked
+#summary(boston.sf$crimes.Buffer)
+```
+
+
+```{r}
+#| eval: true
+#| echo: false
+# Quick histogram to verify
+ggplot(boston.sf, aes(x = crimes.Buffer)) +
+  geom_histogram(bins = 30, fill = "darkred", alpha = 0.7) +
+  labs(title = "Crimes within 660ft of each house") +
+  theme_minimal()
+```
+
+---
+
+## Approach 2: k-Nearest Neighborhoods Method
+
+```{r}
+#| eval: true
+#| echo: true
+
+# Calculate distance matrix (houses to crimes)
+dist_matrix <- st_distance(boston.sf, crimes.sf)
+
+# Function to get mean distance to k nearest neighbors
+get_knn_distance <- function(dist_matrix, k) {
+  apply(dist_matrix, 1, function(distances) {
+    # Sort and take first k, then average
+    mean(as.numeric(sort(distances)[1:k]))
+  })
+}
+
+# Create multiple kNN features
+boston.sf <- boston.sf %>%
+  mutate(
+    crime_nn1 = get_knn_distance(dist_matrix, k = 1),
+    crime_nn3 = get_knn_distance(dist_matrix, k = 3),
+    crime_nn5 = get_knn_distance(dist_matrix, k = 5)
+  )
+
+# Check results
+summary(boston.sf %>% st_drop_geometry() %>% select(starts_with("crime_nn")))
+```
+
+::: {.callout-note}
+Interpretation: crime_nn3 = 83.29 means the average distance to the 3 nearest crimes is 83.29 feet
+:::
+
+---
+
+## Which k value correlates most with price?
+
+```{r}
+#| eval: true
+#| echo: true
+
+# Which k value correlates most with price?
+boston.sf %>%
+  st_drop_geometry() %>%
+  select(SalePrice, crime_nn1, crime_nn3, crime_nn5) %>%
+  cor(use = "complete.obs") %>%
+  as.data.frame() %>%
+  select(SalePrice)
+```
+::: {.callout-tip}
+Finding: The kNN feature with the strongest correlation tells us the relevant "zone of influence" for crime perception!
+:::
+
+---
+
+Approach 3: Distance to Downtown
+
+```{r}
+#| eval: true
+#| echo: true
+
+# Define downtown Boston (Boston Common: 42.3551° N, 71.0656° W)
+downtown <- st_sfc(st_point(c(-71.0656, 42.3551)), crs = "EPSG:4326") %>%
+  st_transform('ESRI:102286')
+
+# Calculate distance from each house to downtown
+boston.sf <- boston.sf %>%
+  mutate(
+    dist_downtown_ft = as.numeric(st_distance(geometry, downtown)),
+    dist_downtown_mi = dist_downtown_ft / 5280
+  )
+
+# Summary
+summary(boston.sf$dist_downtown_mi)
+```
+
+---
+
+### All spatial features together
+
+```{r}
+#| eval: true
+#| echo: true
+
+# Summary of all spatial features created
+spatial_summary <- boston.sf %>%
+  st_drop_geometry() %>%
+  select(crimes.Buffer, crimes_500ft, crime_nn3, dist_downtown_mi) %>%
+  summary()
+
+spatial_summary
+```
+
+```{r}
+#| eval: true
+#| echo: false
+
+# Create summary table
+feature_summary <- tribble(
+  ~Feature, ~Type, ~"What it Measures",
+  "crimes.Buffer (660ft)", "Buffer count", "Number of crimes near house",
+  "crimes_500ft", "Buffer count", "Crimes within 500ft",
+  "crime_nn3", "kNN distance", "Avg distance to 3 nearest crimes (ft)",
+  "dist_downtown_mi", "Point distance", "Miles from downtown Boston"
+)
+
+knitr::kable(feature_summary, align = c('l', 'l', 'l'))
+```
+---
+
+### Model Comparison: Adding Spatial Features
+
+```{r}
+#| eval: true
+#| echo: true
+
+
+boston.sf <- boston.sf %>%
+  mutate(Age = 2015 - YR_BUILT)  
+
+# Model 1: Structural only
+model_structural <- lm(SalePrice ~ LivingArea + R_BDRMS + Age, 
+                       data = boston.sf)
+
+# Model 2: Add spatial features
+model_spatial <- lm(SalePrice ~ LivingArea + R_BDRMS + Age +
+                    crimes_500ft + crime_nn3 + dist_downtown_mi,
+                    data = boston.sf)
+
+# Compare
+cat("Structural R²:", round(summary(model_structural)$r.squared, 4), "\n")
+cat("With spatial R²:", round(summary(model_spatial)$r.squared, 4), "\n")
+cat("Improvement:", round(summary(model_spatial)$r.squared - 
+                          summary(model_structural)$r.squared, 4), "\n")
+```
+
+---
+
+# Part 3: Fixed Effects  {background-color="#667eea"}
+
+---
+
+## What Are Fixed Effects?
+
+**Fixed Effects** = Categorical variables that capture **all unmeasured characteristics** of a group
+
+**In hedonic models:**
+
+- Each neighborhood gets its own dummy variable
+- Captures everything unique about that neighborhood we didn't explicitly measure
+
+*We technically already did this when I went over categorical data!*
+
+::: {.columns}
+::: {.column width="50%"}
+**What They Capture:**
+
+- School quality
+- "Prestige" or reputation
+- Walkability
+- Access to jobs
+- Cultural amenities
+- Things we **can't easily measure**
+:::
+
+::: {.column width="50%"}
+**The Code:**
+
+```{r}
+#| eval: false
+#| echo: true
+
+# Add neighborhood fixed effects
+reg5 <- lm(
+  SalePrice ~ LivingArea + Age + 
+              crimes_500ft + 
+              parks_nn3 + 
+              as.factor(name),  # FE
+  data = boston.sf
+)
+```
+
+R creates a dummy for each neighborhood automatically!
+:::
+:::
+
+---
+
+## How Fixed Effects Work
+
+```{r}
+#| eval: false
+#| echo: true
+
+# Behind the scenes, R creates dummies:
+# is_BackBay = 1 if Back Bay, 0 otherwise
+# is_Beacon = 1 if Beacon Hill, 0 otherwise
+# is_Allston = 1 if Allston, 0 otherwise
+# ... (R drops one as reference category)
+```
+
+**Interpretation Example:**
+
+```
+Coefficients:
+(Intercept)           50000
+LivingArea              150
+nameBack_Bay          85000   ← $85k premium vs. reference
+nameBeacon_Hill      125000   ← $125k premium  
+nameAllston          -15000   ← $15k discount
+```
+
+**Each coefficient = price premium/discount for that neighborhood** (holding all else constant)
+
+---
+
+## Why Use Fixed Effects?
+
+::: {.columns}
+::: {.column width="50%"}
+### Dramatically Improve Prediction
+
+```
+Model Comparison (R²):
+- Structural only:     0.58
+- + Spatial features:  0.67
+- + Fixed Effects:     0.81 ✓
+```
+
+**Why such a big jump?**
+
+- Neighborhoods bundle many unmeasured factors
+- School districts
+- Job access
+- Amenities
+- "Cool factor"
+:::
+
+::: {.column width="50%"}
+### Coefficients Change
+
+**Crime coefficient:**
+
+- Without FE: -$125/crime
+- With FE: -$85/crime
+
+**Why?**
+
+- Without FE: captured neighborhood confounders too
+- With FE: neighborhoods "absorb" other differences
+- Now just the crime effect
+:::
+:::
+
+**Trade-off:** FE are powerful but they're a **black box** - we don't know WHY Back Bay commands a premium
+
+---
+
+## Let's Compare All Our Models
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Model 3: Structural Only
+reg3 <- lm(SalePrice ~ LivingArea + Age + R_FULL_BTH, 
+           data = boston.sf)
+
+# Model 4: Add Spatial Features  
+reg4 <- lm(SalePrice ~ LivingArea + Age + R_FULL_BTH +
+                       crimes_500ft + crime_nn3+ dist_downtown_mi,
+           data = boston.sf)
+
+boston.sf <- boston.sf %>%
+  st_join(nhoods, join = st_intersects)
+
+# Model 5: Add Fixed Effects
+reg5 <- lm(SalePrice ~ LivingArea + Age + R_FULL_BTH +
+                       crimes_500ft + crime_nn3+ dist_downtown_mi +
+                       as.factor(name),
+           data = boston.sf)
+library(stargazer)
+# Compare in-sample fit
+stargazer(reg3, reg4, reg5, type = "text")
+```
+
+**But in-sample R² can be misleading! We need cross-validation...**
+
+---
+
+# Part 5: Cross-Validation (with Categorical Variables) {background-color="#667eea"}
+
+---
+
+## CV Recap (From Last Week)
+
+**Three common validation approaches:**
+
+1. **Train/Test Split** - 80/20 split, simple but unstable
+2. **k-Fold Cross-Validation** - Split into k folds, train on k-1, test on 1, repeat
+3. **LOOCV** - Leave one observation out at a time (special case of *k*-fold)
+
+**Today we'll use k-fold CV** to compare our hedonic models
+
+::: {.columns}
+::: {.column width="50%"}
+```{r}
+#| eval: true
+#| echo: true
+
+library(caret)
+
+ctrl <- trainControl(
+  method = "cv",
+  number = 10  # 10-fold CV
+)
+
+model_cv <- train(
+  SalePrice ~ LivingArea + Age,
+  data = boston.sf,
+  method = "lm",
+  trControl = ctrl
+)
+```
+:::
+
+::: {.column width="50%"}
+**Why CV?**
+
+- Tells us how well model predicts NEW data
+- More honest than in-sample R²
+- Helps detect overfitting
+:::
+:::
+
+---
+
+## Comparing Models with CV
+
+```{r}
+#| echo: true
+#| eval: false
+
+library(caret)
+ctrl <- trainControl(method = "cv", number = 10)
+
+# Model 1: Structural
+cv_m1 <- train(
+  SalePrice ~ LivingArea + Age + R_FULL_BTH,
+  data = boston.sf, method = "lm", trControl = ctrl
+)
+
+# Model 2: + Spatial
+cv_m2 <- train(
+  SalePrice ~ LivingArea + Age + R_FULL_BTH + crimes_500ft + crime_nn3,
+  data = boston.sf, method = "lm", trControl = ctrl
+)
+
+# Model 3: + Fixed Effects (BUT WAIT - there's a (potential) problem!)
+cv_m3 <- train(
+  SalePrice ~ LivingArea + Age + R_FULL_BTH + crimes_500ft + crime_nn3 + 
+              as.factor(name),
+  data = boston.sf, method = "lm", trControl = ctrl
+)
+
+# Compare
+data.frame(
+  Model = c("Structural", "Spatial", "Fixed Effects"),
+  RMSE = c(cv_m1$results$RMSE, cv_m2$results$RMSE, cv_m3$results$RMSE)
+)
+```
+
+---
+
+## ⚠️ The Problem: Sparse Categories
+
+### When CV Fails with Categorical Variables
+
+```{r}
+#| eval: false
+#| echo: true
+
+# You might see this error:
+Error in model.frame.default: 
+  factor 'name' has new level 'West End'
+```
+
+**What happened?**
+
+1. Random split created 10 folds
+2. All "West End" sales ended up in ONE fold (the test fold)
+3. Training folds never saw "West End"
+4. Model can't predict for a category it never learned
+
+::: {.callout-important}
+### The Issue
+
+When neighborhoods have **very few sales** (<10), random CV splits can put all instances in the same fold, breaking the model.
+:::
+
+---
+
+## Check Your Data First!
+
+```{r}
+#| echo: true
+#| eval: false
+
+# ALWAYS run this before CV with categorical variables
+category_check %
+  st_drop_geometry() %>%
+  count(name) %>%
+  arrange(n)
+
+print(category_check)
+```
+
+**Typical output:**
+
+```
+name                n
+West End            3  ⚠️ Problem!
+Bay Village         5  ⚠️ Risky
+Leather District    8  ⚠️ Borderline
+Back Bay           89  ✓ Safe
+South Boston      112  ✓ Safe
+```
+
+::: {.callout-tip}
+**Rule of Thumb:** Categories with **n < 10** will likely cause CV problems
+:::
+
+---
+
+## Solution: Group Small Neighborhoods
+
+**Most practical approach:**
+
+```{r}
+#| echo: true
+#| eval: false
+
+# Step 1: Add count column
+boston.sf <- boston.sf %>%
+  add_count(name)
+
+# Step 2: Group small neighborhoods
+boston.sf <- boston.sf %>%
+  mutate(
+    name_cv = if_else(
+      n < 10,                       # If fewer than 10 sales
+      "Small_Neighborhoods",        # Group them
+      as.character(name)            # Keep original
+    ),
+    name_cv = as.factor(name_cv)
+  )
+
+# Step 3: Use grouped version in CV
+cv_model_fe <- train(
+  SalePrice ~ LivingArea + Age + crimes_500ft + 
+              as.factor(name_cv),   # Use name_cv, not name!
+  data = boston.sf,
+  method = "lm",
+  trControl = trainControl(method = "cv", number = 10)
+)
+```
+
+**Trade-off:** Lose granularity for small neighborhoods, but avoid CV crashes
+
+---
+
+## Alternative: Drop Sparse Categories
+
+**If grouping doesn't make sense:**
+
+```{r}
+#| echo: true
+#| eval: false
+
+# Remove neighborhoods with < 10 sales
+neighborhood_counts %
+  st_drop_geometry() %>%
+  count(name)
+
+keep_neighborhoods %
+  filter(n >= 10) %>%
+  pull(name)
+
+boston_filtered %
+  filter(name %in% keep_neighborhoods)
+
+cat("Removed", nrow(boston.sf) - nrow(boston_filtered), "observations")
+```
+
+::: {.callout-warning}
+**Consider carefully:** Which neighborhoods are you excluding? Often those with less data are marginalized communities. Document what you removed and why.
+:::
+
+---
+
+## My Recommended Workflow
+
+```{r}
+#| echo: true
+#| eval: true
+
+# 1. Check category sizes
+boston.sf %>%
+  st_drop_geometry() %>%
+  count(name) %>%
+  arrange(n) %>%
+  print()
+
+# 2. Group if needed
+boston.sf <- boston.sf %>%
+  add_count(name) %>%
+  mutate(
+    name_cv = if_else(n < 10, "Small_Neighborhoods", as.character(name)),
+    name_cv = as.factor(name_cv)
+  )
+
+# 3. Set up CV
+ctrl <- trainControl(method = "cv", number = 10)
+
+# 4. Use grouped neighborhoods in ALL models with FE
+model <- train(
+  SalePrice ~ LivingArea + Age + crimes_500ft + as.factor(name_cv),
+  data = boston.sf,
+  method = "lm",
+  trControl = ctrl
+)
+
+# 5. Report
+cat("10-fold CV RMSE:", round(model$results$RMSE, 0), "\n")
+```
+
+---
+
+## Full Model Comparison with CV
+
+```{r}
+#| echo: true
+#| eval: true
+
+library(caret)
+
+# Prep data
+boston.sf <- boston.sf %>%
+  add_count(name) %>%
+  mutate(name_cv = if_else(n < 10, "Small_Neighborhoods", as.character(name)),
+         name_cv = as.factor(name_cv))
+
+ctrl <- trainControl(method = "cv", number = 10)
+
+# Compare models
+cv_structural <- train(
+  SalePrice ~ LivingArea + Age + R_FULL_BTH,
+  data = boston.sf, method = "lm", trControl = ctrl
+)
+
+cv_spatial <- train(
+  SalePrice ~ LivingArea + Age + R_FULL_BTH + crimes_500ft + crime_nn3,
+  data = boston.sf, method = "lm", trControl = ctrl
+)
+
+cv_fixedeffects <- train(
+  SalePrice ~ LivingArea + Age + R_FULL_BTH + crimes_500ft + crime_nn3 + 
+              as.factor(name_cv),
+  data = boston.sf, method = "lm", trControl = ctrl
+)
+
+# Results
+data.frame(
+  Model = c("Structural", "+ Spatial", "+ Fixed Effects"),
+  RMSE = c(cv_structural$results$RMSE, 
+           cv_spatial$results$RMSE, 
+           cv_fixedeffects$results$RMSE)
+)
+```
+
+---
+
+## Expected Results
+
+**Typical pattern:**
+
+```
+Model              RMSE      Interpretation
+Structural        $533,330.60   Baseline - just house characteristics
++ Spatial         $500,421.5    Adding location features helps!
++ Fixed Effects   $347,261.30   Neighborhoods capture a LOT
+```
+*Note: these values are kind of ginormous - remember RMSE squares big errors, so outliers can have a really large impact*
+
+**Key Insight:** Each layer improves **out-of-sample** prediction, with fixed effects providing the biggest boost
+
+**Why?** Neighborhoods bundle many unmeasured factors (schools, amenities, prestige) that we can't easily quantify individually
+
+---
+
+## Investigating those errors...
+
+```{r}
+#| echo: false
+#| eval: true
+ggplot(boston.sf, aes(x = SalePrice)) +
+  geom_histogram(bins = 50) +
+  scale_x_continuous(labels = scales::dollar) +
+  labs(title = "Distribution of Sale Prices")
+summary(boston.sf$SalePrice)
+
+boston.sf %>%
+  st_drop_geometry() %>%
+  arrange(desc(SalePrice)) %>%
+  select(SalePrice, LivingArea, name) %>%
+  head(10)
+
+
+ggplot(boston.sf, aes(y = SalePrice)) +
+  geom_boxplot() +
+  scale_y_continuous(labels = scales::dollar) +
+  labs(title = "Sale Price Outliers")
+
+```
+
+**Look for:**
+- Prices over $2-3 million (could be luxury condos or errors)
+- Prices near $0 (data errors)
+- Long right tail in histogram
+
+---
+
+# What to Do?
+
+**Log Transform the skewed dependent variable**
+
+::: {.callout-note}
+### Interpreting Log Models
+
+- RMSE is now in **log-dollars** (hard to interpret)
+- To convert back: `exp(predictions)` gives actual dollars
+- Coefficients now represent **percentage changes**, not dollar changes
+- This is standard practice in hedonic modeling!
+:::
+
+---
+## 🎯 Final Team Exercise (Remaining Class Time)
+
+---
+
+## Team Exercise: Practice What We've Done and Build Your Best Model
+
+**Goal:** Create a comprehensive hedonic model using ALL concepts from today (and last week)
+
+**Requirements:**
+
+1. Structural variables (including categorical)
+2. Spatial features (create your own - nhttps://data.boston.gov/group/geospatial
+3. At least one interaction term
+4. One non-linear (polynomial term)
+4. Neighborhood fixed effects (handle sparse categories!)
+5. 10-fold cross-validation
+6. Report final RMSE
+
+*Use diagnostics from last week as you build!*
+---
+
+## Report Out on Board
+
+**Each team will share (3 minutes):**
+
+1. **Variables used:**
+   - Structural: ____________
+   - Spatial: ____________
+   - Non-linear: __________
+   - Interactions: ____________
+   - Fixed Effects: Yes/No, how handled sparse categories?
+
+2. **Final cross-validated RMSE:** $____________ and **MAE** $______________
+
+3. **One insight:**
+   - What made the biggest difference?
+   - Did anything surprise you?
+   - Which variables mattered most?
+
+---
+
+
+## Tips for Success
+
+::: {.columns}
+::: {.column width="50%"}
+### ✅ Do:
+- Start simple, add complexity
+- Check for NAs: `sum(is.na())`
+- Test on small subset first
+- Comment your code
+- Check coefficient signs
+- Use `glimpse()`, `summary()`
+
+### ❌ Don't:
+- Add 50 variables at once
+- Ignore errors
+- Forget `st_drop_geometry()` for non-spatial operations
+- Skip sparse category check
+:::
+
+::: {.column width="50%"}
+### Common Errors
+
+**"Factor has new levels"**
+→ Group sparse categories
+
+**"Computationally singular"**
+→ Remove collinear variables
+
+**Very high RMSE**
+→ Check outliers, scale
+
+**CV takes forever**
+→ Simplify model or reduce folds
+
+**Negative R²**
+→ Model worse than mean, rethink variables
+:::
+:::
+
+---
+
