@@ -48,22 +48,36 @@ Load the required spatial data:
 **Your Task:**
 ```{r}
 # Load required packages
+library(sf)
+library(tigris)
+library(tidycensus)
+library(dplyr)
+library(knitr)
 
+census_api_key("e17c1c6ce413dc3faca31a17a58ab3374404bb9e")
+census_api_key(Sys.getenv("CENSUS_API_KEY"), install = FALSE)
 
 # Load spatial data
 
-
-
+pa_counties <- st_read("D:/Code/MUSA-5080-Fall-2025/labs/lab_2/data/Pennsylvania_County_Boundaries.shp")
+pa_hospitals <- st_read("D:/Code/MUSA-5080-Fall-2025/labs/lab_2/data/hospitals.geojson")
+pa_tracts <- st_read("D:/Code/MUSA-5080-Fall-2025/labs/lab_2/data/districts.geojson")
 
 # Check that all data loaded correctly
+class(pa_counties)
+nrow(pa_hospitals)
+nrow(pa_tracts)
 
+st_crs(pa_counties)
+st_crs(pa_hospitals)
+st_crs(pa_tracts)
 
 ```
 
 **Questions to answer:**
-- How many hospitals are in your dataset?
-- How many census tracts?
-- What coordinate reference system is each dataset in?
+- How many hospitals are in your dataset? 【223】
+- How many census tracts? 【17】
+- What coordinate reference system is each dataset in? 【WGS 84】 
 
 ---
 
@@ -79,19 +93,56 @@ Use `tidycensus` to download tract-level demographic data for Pennsylvania.
 **Your Task:**
 ```{r}
 # Get demographic data from ACS
+vars <- c(
+  total_pop = "B01003_001",
+  med_income = "B19013_001"
+)
 
+age_vars <- c(
+  "B01001_020", "B01001_021", "B01001_022", "B01001_023", "B01001_024", "B01001_025",  # Males 65+
+  "B01001_044", "B01001_045", "B01001_046", "B01001_047", "B01001_048", "B01001_049"   # Females 65+
+)
 
+pa_demo <- get_acs(
+  geography = "tract",
+  variables = vars,
+  state = "PA",
+  year = 2022,
+  geometry = TRUE
+)
 
-
+pa_age <- get_acs(
+  geography = "tract",
+  variables = age_vars,
+  state = "PA",
+  year = 2022
+)
 # Join to tract boundaries
+pa_age65plus <- pa_age %>%
+  group_by(GEOID) %>%
+  summarise(age65plus = sum(estimate, na.rm = TRUE))
 
+pa_demo_wide <- pa_demo %>%
+  select(GEOID, variable, estimate) %>%
+  tidyr::pivot_wider(names_from = variable, values_from = estimate)
+
+pa_demo_final <- pa_demo_wide %>%
+  left_join(pa_age65plus, by = "GEOID")
+
+pa_income <- pa_demo %>%
+  dplyr::filter(variable == "med_income") %>%
+  dplyr::select(GEOID, NAME, estimate)
+nrow(pa_income)
+
+sum(is.na(pa_income$estimate))
+median(pa_income$estimate, na.rm = TRUE)
 
 ```
 
 **Questions to answer:**
-- What year of ACS data are you using?
-- How many tracts have missing income data?
-- What is the median income across all PA census tracts?
+- What year of ACS data are you using?  【2022】
+- How many tracts have missing income data?  【63】
+- What is the median income across all PA census tracts?  【70188】
 
 ---
 
@@ -104,17 +155,32 @@ Identify census tracts with vulnerable populations based on TWO criteria:
 **Your Task:**
 ```{r}
 # Filter for vulnerable tracts based on your criteria
+median_income_pa <- median(pa_income$estimate, na.rm = TRUE)
+income_threshold <- median_income_pa * 0.8
+elderly_threshold <- 0.15
 
+pa_demo_final <- pa_demo_final %>%
+  mutate(elderly_share = age65plus / total_pop)
 
+vulnerable_tracts <- pa_demo_final %>%
+  filter(
+    med_income < income_threshold,
+    elderly_share > elderly_threshold
+  )
 
+n_vulnerable <- nrow(vulnerable_tracts)
+pct_vulnerable <- n_vulnerable / nrow(pa_demo_final) * 100
+
+n_vulnerable
+pct_vulnerable
 
 ```
 
 **Questions to answer:**
-- What income threshold did you choose and why?
-- What elderly population threshold did you choose and why?
-- How many tracts meet your vulnerability criteria?
-- What percentage of PA census tracts are considered vulnerable by your definition?
+- What income threshold did you choose and why?  【】
+- What elderly population threshold did you choose and why?  【】
+- How many tracts meet your vulnerability criteria?  【】
+- What percentage of PA census tracts are considered vulnerable by your definition?  【】
 
 ---
 
