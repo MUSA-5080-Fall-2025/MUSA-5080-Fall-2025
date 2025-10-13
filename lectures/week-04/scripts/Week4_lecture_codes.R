@@ -5,7 +5,11 @@ library(tidyverse)
 library(ggplot2)
 library(tigris)
 library(tidycensus)
+<<<<<<< HEAD
 census_api_key("42bf8a20a3df1def380f330cf7edad0dd5842ce6")
+=======
+census_api_key("e17c1c6ce413dc3faca31a17a58ab3374404bb9e")
+>>>>>>> 2b37881bb7de80f3af7e488346e9318fa2e2df3e
 # Read a shapefile
 pa_counties <- st_read("data/Pennsylvania_County_Boundaries.shp")
 
@@ -50,7 +54,11 @@ county_shapes <- st_geometry(pa_counties)
 county_data <- st_drop_geometry(pa_counties)
 
 # Simple plot
+<<<<<<< HEAD
 plot(pa_counties[1])
+=======
+plot(pa_counties)
+>>>>>>> 2b37881bb7de80f3af7e488346e9318fa2e2df3e
 
 # Just the geometry
 plot(st_geometry(pa_counties))
@@ -106,6 +114,12 @@ ggplot(metro_tracts) +
   geom_sf() +
   theme_void()
 
+<<<<<<< HEAD
+=======
+ggplot(rural_tracts) +
+  geom_sf() +
+  theme_void()
+>>>>>>> 2b37881bb7de80f3af7e488346e9318fa2e2df3e
 
 ##spatial joins
 # Get census tract data
@@ -142,7 +156,11 @@ head(distance_matrix)
 # Calculate county areas
 pa_counties <- pa_counties %>%
   mutate(
+<<<<<<< HEAD
     area_sqkm = as.numeric(st_area(pa_counties)) / 1000000  # Convert to sq km
+=======
+    area_sqkm = as.numeric(st_area(.)) / 1000000  # Convert to sq km
+>>>>>>> 2b37881bb7de80f3af7e488346e9318fa2e2df3e
   )
 
 # Population density (need to join census data)
@@ -154,7 +172,11 @@ pa_counties <- pa_counties %>%
 
 # Distance from each county to a specific point
 philadelphia <- pa_counties %>%
+<<<<<<< HEAD
   filter(COUNTY_NAM == "Philadelphia")
+=======
+  filter(NAME == "Philadelphia")
+>>>>>>> 2b37881bb7de80f3af7e488346e9318fa2e2df3e
 philly_center <- st_centroid(philadelphia)
 
 pa_counties <- pa_counties %>%
@@ -201,11 +223,21 @@ pa_tracts_data <- get_acs(
 )
 
 # Join demographic data to tract boundaries
+<<<<<<< HEAD
 census_tracts <- census_tracts %>%
   left_join(pa_tracts_data, by = "GEOID")
 
 # Identify vulnerable populations (low-income tracts)
 low_income_tracts <- census_tracts %>%
+=======
+library(dplyr)
+tracts <- tracts %>%
+  dplyr::left_join(pa_tracts_data, by = "GEOID")
+
+
+# Identify vulnerable populations (low-income tracts)
+low_income_tracts <- tracts %>%
+>>>>>>> 2b37881bb7de80f3af7e488346e9318fa2e2df3e
   filter(median_incomeE < 40000)
 
 low_income_tracts  <- low_income_tracts  %>%
@@ -255,10 +287,17 @@ p2 <- ggplot() +
 p1 | p2
 
 districts <- districts %>%
+<<<<<<< HEAD
   st_transform(st_crs(census_tracts))
 
 # Average income by congressional district
 tracts_by_district <- census_tracts %>%
+=======
+  st_transform(st_crs(tracts))
+
+# Average income by congressional district
+tracts_by_district <- tracts %>%
+>>>>>>> 2b37881bb7de80f3af7e488346e9318fa2e2df3e
   st_join(districts) %>%
   st_drop_geometry() %>%
   group_by(OBJECTID) %>%

@@ -51,10 +51,12 @@ If there is a special character like comma, you need use double quote mark so th
 # Setup
 
 ```{r setup}
-# Load required packages (hint: you need tidycensus, tidyverse, and knitr)
-
+# Load required packages (hint: you need tidy census, tidyverse, and knitr)
+library(tidycensus)
+library(tidyverse)
+library(knitr)
 # Set your Census API key
-
+census_api_key("e17c1c6ce413dc3faca31a17a58ab3374404bb9e")
 # Choose your state for analysis - assign it to a variable called my_state
 ```
 
@@ -77,7 +79,32 @@ If there is a special character like comma, you need use double quote mark so th
 
 ```{r county-data}
 # Write your get_acs() code here
+state_pop <- get_acs(
+  geography = "county",
+  variables = "B01003_001",  
+  state = "NY", 
+  year = 2022,
+  survey = "acs5"
+)
+glimpse(state_pop)
+ny_data <- get_acs(
+  geography = "county",
+  variables = c(
+    total_pop = "B01003_001",
+    median_income = "B19013_001"
+  ),
+  state = "NY",
+  year = 2022,
+  output = "wide"
+)
 
+head(ny_data)
+
+ny_clean <- ny_data %>%
+  mutate(
+    county_name = str_remove(NAME, ", New York"),
+    county_name = str_remove(county_name, " County")
+  )
 # Clean the county names to remove state name and "County" 
 # Hint: use mutate() with str_remove()
 
@@ -100,6 +127,20 @@ If there is a special character like comma, you need use double quote mark so th
 
 ```{r income-reliability}
 # Calculate MOE percentage and reliability categories using mutate()
+select(ny_clean, NAME, county_name)
+
+ny_reliability <- ny_clean %>%
+  mutate(
+    moe_percentage = round((median_incomeM / median_incomeE) * 100, 2),
+
+    reliability = case_when(
+      moe_percentage < 5 ~ "High Confidence",
+      moe_percentage >= 5 & moe_percentage <= 10 ~ "Moderate",
+      moe_percentage > 10 ~ "Low Confidence"
+    )
+  )
+
+count(ny_reliability, reliability)
 
 # Create a summary showing count of counties in each reliability category
 # Hint: use count() and mutate() to add percentages
@@ -119,13 +160,29 @@ If there is a special character like comma, you need use double quote mark so th
 
 ```{r high-uncertainty}
 # Create table of top 5 counties by MOE percentage
+high_uncertainty <- ny_reliability %>%
+  filter(moe_percentage > 8) %>%
+  arrange(desc(moe_percentage)) %>%
+  select(county_name, median_incomeE, moe_percentage)
+
+reliability_summary <- ny_reliability %>%
+  group_by(reliability) %>%
+  summarize(
+    counties = n(),
+    avg_income = round(mean(median_incomeE, na.rm = TRUE), 0)
+  )
+
+kable(high_uncertainty,
+      col.names = c("County", "Median Income", "MOE %"),
+      caption = "Counties with Highest Income Data Uncertainty",
+      format.args = list(big.mark = ","))
 
 # Format as table with kable() - include appropriate column names and caption
 ```
 
 **Data Quality Commentary:**
 
-[Write 2-3 sentences explaining what these results mean for algorithmic decision-making. Consider: Which counties might be poorly served by algorithms that rely on this income data? What factors might contribute to higher uncertainty?]
+  [The tables show that counties like Hamilton and Schuyler have high MOE in the income data, which means these data may lead to less reliable outcome or decision for residents in terms of algorithms. Small size of populations and limited survey samples may contribute to this uncertainty, so that unfair treatment or lows may be established which will affect local people in these areas.]
 
 # Part 3: Neighborhood-Level Analysis
 
@@ -138,12 +195,17 @@ If there is a special character like comma, you need use double quote mark so th
 ```{r select-counties}
 # Use filter() to select 2-3 counties from your county_reliability data
 # Store the selected counties in a variable called selected_counties
-
+selected_counties <- ny_reliability %>%
+  filter(
+    county_name %in% c("Albany", "Schuyler", "Hamilton")
+  )
+selected_counties %>%
+  select(county_name, median_incomeE, moe_percentage, reliability)
 # Display the selected counties with their key characteristics
 # Show: county name, median income, MOE percentage, reliability category
 ```
 
-**Comment on the output:** [write something :)]
+**Comment on the output:** [These three countries reflects different levels of reliability. Albany has highly reliable income data with a very low MOE, while Hamilton's data displays higher uncertainty. As a result, lower populations and limited sample sizes may influence the data confidence, which could lead to less stable estimates and algorithmic decisions.]
 
 ## 3.2 Tract-Level Demographics
 
@@ -158,8 +220,53 @@ If there is a special character like comma, you need use double quote mark so th
 
 ```{r tract-demographics}
 # Define your race/ethnicity variables with descriptive names
+selected_counties <- c("Albany", "Hamilton", "Schuyler")
 
-# Use get_acs() to retrieve tract-level data
+ny_lookup <- tidycensus::fips_codes %>%
+  filter(state == "NY", county %in% paste0(selected_counties, " County")) %>%
+  distinct(county_code, county) %>%
+  mutate(county_name = str_remove(county, " County")) %>%
+  select(county_code, county_name)
+
+race_tract <- get_acs(
+  geography = "tract",
+  variables = c(
+    white     = "B03002_003",
+    black     = "B03002_004",
+    hispanic  = "B03002_012",
+    total_pop = "B03002_001"
+  ),
+  state  = "NY",
+  county = ny_lookup$county_code, 
+  year   = 2022,
+  survey = "acs5",
+  output = "wide"
+)
+
+race_tract <- race_tract %>%
+  mutate(
+    white_pct    = if_else(total_popE > 0, whiteE    / total_popE, NA_real_),
+    black_pct    = if_else(total_popE > 0, blackE    / total_popE, NA_real_),
+    hispanic_pct = if_else(total_popE > 0, hispanicE / total_popE, NA_real_)
+  )
+
+race_tract <- race_tract %>%
+  mutate(
+    county_fips = str_sub(GEOID, 3, 5),
+    tract_id    = str_sub(GEOID, 6)
+  ) %>%
+  left_join(ny_lookup, by = c("county_fips" = "county_code")) %>%
+  mutate(
+    tract_label = paste0(county_name, " County – Tract ", tract_id)
+  )
+
+race_tract %>%
+  select(GEOID, tract_label, county_name,
+         total_popE, whiteE, blackE, hispanicE,
+         white_pct, black_pct, hispanic_pct) %>%
+  arrange(county_name, tract_label) %>%
+  head()
+
 # Hint: You may need to specify county codes in the county parameter
 
 # Calculate percentage of each group using mutate()
@@ -176,10 +283,28 @@ If there is a special character like comma, you need use double quote mark so th
 # Find the tract with the highest percentage of Hispanic/Latino residents
 # Hint: use arrange() and slice() to get the top tract
 
+top_hispanic <- race_tract %>%
+  arrange(desc(hispanic_pct)) %>%
+  slice(1)
+
+top_hispanic
+
 # Calculate average demographics by county using group_by() and summarize()
 # Show: number of tracts, average percentage for each racial/ethnic group
 
+county_summary <- race_tract %>%
+  group_by(county_name) %>%
+  summarize(
+    n_tracts = n(),
+    avg_white_pct = mean(white_pct, na.rm = TRUE),
+    avg_black_pct = mean(black_pct, na.rm = TRUE),
+    avg_hispanic_pct = mean(hispanic_pct, na.rm = TRUE),
+  )
+
 # Create a nicely formatted table of your results using kable()
+
+county_summary <- race_tract %>%
+  kable(digits = 2, captison = "Average Demographics by county (Albany, Hamilton, Schuyler)")
 ```
 
 # Part 4: Comprehensive Data Quality Evaluation
@@ -197,8 +322,32 @@ If there is a special character like comma, you need use double quote mark so th
 # Calculate MOE percentages for white, Black, and Hispanic variables
 # Hint: use the same formula as before (margin/estimate * 100)
 
+demographic_moe <- race_tract %>%
+  mutate(
+    white_moe_pct    = (whiteM    / whiteE)    * 100,
+    black_moe_pct    = (blackM    / blackE)    * 100,
+    hispanic_moe_pct = (hispanicM / hispanicE) * 100
+  )
+
 # Create a flag for tracts with high MOE on any demographic variable
+
+demographic_moe <- demographic_moe %>%
+  mutate(
+    high_moe_flag = if_else(
+      white_moe_pct > 10 | black_moe_pct > 10 | hispanic_moe_pct > 10,
+      TRUE, FALSE
+    )
+  )
+
 # Use logical operators (| for OR) in an ifelse() statement
+
+summary_tracts <- demographic_moe %>%
+  summarise(
+    total_tracts    = n(),
+    high_moe_tracts = sum(high_moe_flag, na.rm = TRUE),
+    pct_high_moe    = 100 * mean(high_moe_flag, na.rm = TRUE)
+  )
+summary_tracts
 
 # Create summary statistics showing how many tracts have data quality issues
 ```
@@ -211,6 +360,18 @@ If there is a special character like comma, you need use double quote mark so th
 # Group tracts by whether they have high MOE issues
 # Calculate average characteristics for each group:
 # - population size, demographic percentages
+
+avg_characteristics <- demographic_moe %>%
+  group_by(high_moe_flag) %>%
+  summarise(
+    avg_pop      = mean(total_popE, na.rm = TRUE),
+    avg_white    = mean(white_pct, na.rm = TRUE),
+    avg_black    = mean(black_pct, na.rm = TRUE),
+    avg_hispanic = mean(hispanic_pct, na.rm = TRUE),
+    n_tracts     = n()
+  )
+
+avg_characteristics
 
 # Use group_by() and summarize() to create this comparison
 # Create a professional table showing the patterns
