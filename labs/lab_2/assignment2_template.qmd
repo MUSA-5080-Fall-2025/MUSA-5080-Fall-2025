@@ -180,7 +180,7 @@ pct_vulnerable
 
 **Questions to answer:**
 - What income threshold did you choose and why?  【I choose the value of 80% of the country median income, so income threshold equals to $56,150. The reason is to low the influence of extremely high-income regions.】
-- What elderly population threshold did you choose and why?  【I choose 15% of total population aged 65 or older as elderly population. The reason it that the percentage of aged poeple of whole country was about 17%.】
+- What elderly population threshold did you choose and why?  【I choose 15% of total population aged 65 or older as elderly population. The reason it that the percentage of aged people of whole country was about 17%.】
 - How many tracts meet your vulnerability criteria?  【There are 480 tracts met my vulnerability criteria.】
 - What percentage of PA census tracts are considered vulnerable by your definition?  【There are nearly 14% of the PA census tracts are considered vulnerable.】
 
@@ -260,17 +260,33 @@ Use spatial joins and aggregation to calculate county-level statistics about vul
 **Your Task:**
 ```{r}
 # Spatial join tracts to counties
-pa_counties_proj <- st_transform(pa_counties, 26918)
+counties_index <- pa_counties_proj %>%
+  st_drop_geometry() %>%
+  distinct(county_geoid = FIPS_COUNT, county_name = COUNTY_NAM)
 
-vuln_with_county <- st_join(
-  vulnerable_tracts_proj,
-  pa_counties_proj %>% dplyr::select(county_geoid = FIPS_COUNT, county_name = COUNTY_NAM),
-  join = st_within, left = TRUE
-)
+library(tidyr)
 
 # Aggregate statistics by county
+county_stats_all <- counties_index %>%
+  left_join(county_stats, by = c("county_geoid","county_name")) %>%
+  mutate(
+    num_vulnerable   = replace_na(num_vulnerable, 0L),
+    num_underserved  = replace_na(num_underserved, 0L),
+    pct_underserved  = if_else(num_vulnerable > 0,
+                               100 * num_underserved / num_vulnerable,
+                               0),                 
+    avg_dist_miles   = if_else(num_vulnerable > 0, avg_dist_miles, NA_real_)
+  )
 
+top5_by_pct <- county_stats_all %>%
+  filter(num_vulnerable > 0) %>%
+  slice_max(pct_underserved, n = 5)
 
+top5_by_count <- county_stats_all %>%
+  slice_max(num_underserved, n = 5)
+
+top5_by_pct
+top5_by_count
 
 ```
 
@@ -282,9 +298,9 @@ vuln_with_county <- st_join(
 - Total vulnerable population
 
 **Questions to answer:**
-- Which 5 counties have the highest percentage of underserved vulnerable tracts?  【】
-- Which counties have the most vulnerable people living far from hospitals?  【】
-- Are there any patterns in where underserved counties are located?  【】
+- Which 5 counties have the highest percentage of underserved vulnerable tracts?  【The five counties with the highest percentage of underserved vulnerable tracts are Sullivan, Cameron, Forest, Monroe, and Potter Counties.】
+- Which counties have the most vulnerable people living far from hospitals?  【CLEARFIELD】
+- Are there any patterns in where underserved counties are located?  【Underserved counties are mainly concentrated in the northern and central rural regions of Pennsylvania. In contrast, urban counties like Philadelphia and Allegheny have few or no underserved tracts because hospitals are more densely distributed.】
 
 ---
 
@@ -295,9 +311,28 @@ Create a professional table showing the top 10 priority counties for healthcare 
 **Your Task:**
 ```{r}
 # Create and format priority counties table
+library(knitr)
+library(scales)
 
+priority_counties <- county_stats_all %>%
+  arrange(desc(pct_underserved)) %>%       
+  slice_head(n = 10) %>%               
+  mutate(
+    pct_underserved = percent(pct_underserved / 100, accuracy = 0.1),
+    avg_dist_miles  = round(avg_dist_miles, 1)
+  ) %>%
+  select(
+    "County Name" = county_name,
+    "Vulnerable Tracts" = num_vulnerable,
+    "Underserved Tracts" = num_underserved,
+    "Percent Underserved" = pct_underserved,
+    "Avg. Distance to Hospital (miles)" = avg_dist_miles
+  )
 
-
+kable(priority_counties,
+      caption = "Top 10 Pennsylvania Counties Prioritized for Healthcare Investment",
+      align = "lrrrr",
+      format = "markdown")
 
 ```
 
@@ -321,9 +356,44 @@ Create a choropleth map showing healthcare access challenges at the county level
 **Your Task:**
 ```{r}
 # Create county-level access map
+library(ggplot2)
+library(sf)
+library(viridis)
 
+grey_blue <- c(
+  "#F4F6F6", 
+  "#D8E0E5", 
+  "#B9C9D2", 
+  "#9AAEBF", 
+  "#7F97A6", 
+  "#5E7C8A", 
+  "#405E70", 
+  "#2E4757"  
+)
 
-
+ggplot() +
+  geom_sf(data = county_map, aes(fill = pct_underserved), color = "white", size = 0.2) +
+  geom_sf(data = pa_hospitals_proj, color = "grey30", size = 0.8, alpha = 0.5) +
+  scale_fill_gradientn(
+    colours = soft_palette,
+    name = "% Underserved",
+    limits = c(0, 100),
+    labels = scales::percent_format(scale = 1),
+    na.value = "grey95"
+  ) +
+  theme_void() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(size = 14, face = "bold", color = "grey20"),
+    plot.subtitle = element_text(size = 11, color = "grey40"),
+    plot.caption = element_text(size = 9, color = "grey50"),
+    panel.background = element_rect(fill = "white", color = NA)
+  ) +
+  labs(
+    title = "Healthcare Access Across Pennsylvania Counties",
+    subtitle = "Percentage of vulnerable tracts more than 15 miles from nearest hospital",
+    caption = "Data: ACS 2022, hospitals.geojson"
+  )
 
 ```
 
@@ -344,9 +414,39 @@ Create a map highlighting underserved vulnerable tracts.
 **Your Task:**
 ```{r}
 # Create detailed tract-level map
+tract_palette <- c(
+  "FALSE" = "#B7C4CF",  
+  "TRUE"  = "#8B3A3A"   
+)
 
-
-
+ggplot() +
+  geom_sf(data = pa_counties_proj, fill = "white", color = "grey85", size = 0.2) +
+  
+  geom_sf(data = vulnerable_tracts_proj, 
+          aes(fill = as.factor(underserved)), 
+          color = NA, alpha = 0.8) +
+  
+  geom_sf(data = pa_hospitals_proj, color = "grey30", size = 0.7, alpha = 0.5) +
+  
+  scale_fill_manual(
+    values = tract_palette,
+    name = "Underserved Status",
+    labels = c("Not Underserved", "Underserved")
+  ) +
+  theme_void() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(size = 14, face = "bold", color = "#333333"),
+    plot.subtitle = element_text(size = 11, color = "grey40"),
+    plot.caption = element_text(size = 9, color = "grey50"),
+    legend.title = element_text(size = 10, face = "bold"),
+    legend.text = element_text(size = 9)
+  ) +
+  labs(
+    title = "Underserved Vulnerable Census Tracts in Pennsylvania",
+    subtitle = "Tracts more than 15 miles from nearest hospital (highlighted in warm red-brown)",
+    caption = "Data: ACS 2022, hospitals.geojson"
+  )
 
 ```
 
@@ -366,8 +466,28 @@ Create a visualization showing the distribution of distances to hospitals for vu
 **Your Task:**
 ```{r}
 # Create distribution visualization
-
-
+ggplot(vulnerable_tracts_proj, aes(x = dist_to_nearest_hospital_miles)) +
+  geom_histogram(
+    fill = "#8B3A3A",      
+    color = "white", 
+    bins = 30,            
+    alpha = 0.8
+  ) +
+  geom_vline(aes(xintercept = 15), color = "#405E70", linetype = "dashed", size = 0.8) +
+  theme_minimal() +
+  labs(
+    title = "Distribution of Distance to Nearest Hospital",
+    subtitle = "Vulnerable census tracts across Pennsylvania",
+    x = "Distance to nearest hospital (miles)",
+    y = "Number of tracts",
+    caption = "Dashed line represents 15-mile threshold for underserved classification"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14, color = "#2E4757"),
+    plot.subtitle = element_text(size = 11, color = "grey40"),
+    axis.title = element_text(size = 10),
+    panel.grid.minor = element_blank()
+  )
 
 
 ```
@@ -504,23 +624,39 @@ Choose ONE of the following challenge exercises, or propose your own research qu
 
 ```{r}
 # Load your additional dataset
+library(sf)
+library(dplyr)
+library(tidycensus)
+library(tigris)
 
+bike_stations <- st_read("data/indego_stations.geojson")
 
+glimpse(bike_stations)
+st_crs(bike_stations)
+nrow(bike_stations)
+
+philly_tracts <- tracts(state = "PA", county = "Philadelphia", year = 2022, cb = TRUE)
+st_crs(philly_tracts)
+
+bike_stations <- st_transform(bike_stations, st_crs(philly_tracts))
+plot(st_geometry(philly_tracts))
+plot(st_geometry(bike_stations), add = TRUE, col = "blue", pch = 16, cex = 0.5)
 
 
 ```
 
 **Questions to answer:**
-- What dataset did you choose and why?
-- What is the data source and date?
-- How many features does it contain?
-- What CRS is it in? Did you need to transform it?
+- What dataset did you choose and why? 【I used Indego Bike Share Station data from OpenDataPhilly to evaluate spatial equity in bicycle access.】
+- What is the data source and date?  【OpenDataPhilly (updated 2024)】
+- How many features does it contain?  【】
+- What CRS is it in? Did you need to transform it?  【】
 
 ---
 
 2. **Pose a research question**
 
 Write a clear research statement that your analysis will answer.
+【】
 
 **Examples:**
 - "Do vulnerable tracts have adequate public transit access to hospitals?"
@@ -570,6 +706,7 @@ Use at least TWO spatial operations to answer your research question.
 
 ## Finally - A few comments about your incorporation of feedback!
 Take a few moments to clean up your markdown document and then write a line or two or three about how you may have incorporated feedback that you recieved after your first assignment. 
+【】
 
 ---
 
