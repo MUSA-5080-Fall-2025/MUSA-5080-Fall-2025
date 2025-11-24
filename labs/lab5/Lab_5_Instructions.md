@@ -112,7 +112,7 @@ Write 1-2 paragraphs addressing:
 
 ## What to Submit (per team)
 
-1. **Rmd file** with all your code (commented!)
+1. **qmd file** with all your code (commented!)
 2. **HTML output** with results and visualizations
 3. **Brief report** summarizing (with supporting data & visualization):
 
@@ -121,6 +121,7 @@ Write 1-2 paragraphs addressing:
    - Error analysis insights
    - New features you added and why
    - Critical reflection on deployment
+4. You only need to submitted once as a team (one submit the link to your portfolio on Canvas)
 
 ## Tips for Success
 
