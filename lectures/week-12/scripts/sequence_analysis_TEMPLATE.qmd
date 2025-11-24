@@ -1,0 +1,775 @@
+---
+title: "Sequence Analysis of Neighborhood Change: [YOUR CITY NAME]"
+subtitle: "MUSA 5080 - Week 8 Lab Exercise"
+author: "Your Name"
+date: today
+format:
+  html:
+    toc: true
+    code-fold: show
+    theme: cosmo
+    self-contained: true
+execute:
+  warning: false
+  message: false
+---
+
+# BEFORE YOU START: Customization Checklist
+
+**This template follows the NYC tutorial workflow. You MUST customize:**
+
+- [ ] Line 50-52: Replace NYC county names with YOUR metro counties
+- [ ] Line 54: Replace "NY" with YOUR state abbreviation
+- [ ] Line 102-107: Update county filter to YOUR metro counties
+- [ ] Line 270: Adjust k value (may not be 6 for your city)
+- [ ] Line 276-281: Relabel clusters based on YOUR city's demographics
+- [ ] Line 436: Adjust number of trajectory clusters (may not be 14)
+- [ ] Line 444-457: Rename trajectory clusters based on YOUR patterns
+
+**Data Requirements:**
+- LTDB data files in `data/` folder (1980, 1990, 2000, 2010)
+- 2020 Census data (will download via tidycensus)
+- Census API key (get from: https://api.census.gov/data/key_signup.html)
+
+---
+
+# Setup
+
+## Load Libraries
+
+```{r setup}
+library(tidyverse)      # Data manipulation
+library(tidycensus)     # Census data
+library(sf)             # Spatial data
+library(tigris)         # Census boundaries
+library(TraMineR)       # Sequence analysis
+library(cluster)        # Clustering
+library(factoextra)     # Cluster visualization
+library(WeightedCluster)# Cluster validation
+library(knitr)          # Tables
+library(here)           # File paths
+
+# Set Census API key - GET YOUR OWN KEY!
+# census_api_key("YOUR_KEY_HERE", install = TRUE)
+```
+
+## Load LTDB Data
+
+**CUSTOMIZE:** Ensure your file paths match your data location
+
+```{r load_data}
+# Load longitudinal census data from LTDB
+census20 <- read.csv("data/ltdb_std_2020_fullcount.csv")
+census10 <- read.csv("data/LTDB_Std_2010_fullcount.csv")
+census00 <- read.csv("data/LTDB_Std_2000_fullcount.csv")
+census90 <- read.csv("data/LTDB_Std_1990_fullcount.csv")
+census80 <- read.csv("data/LTDB_Std_1980_fullcount.csv")
+```
+
+## Get Tract Geometries
+
+**CUSTOMIZE:** Replace with YOUR metro area
+
+```{r get_geometry}
+# STEP 1: Define YOUR metro counties
+# NYC example:
+my_counties <- c("Kings", "Queens", "New York", "Richmond", "Bronx")
+# YOUR CITY - Example for Philadelphia:
+# my_counties <- c("Philadelphia", "Montgomery", "Delaware", "Chester", "Bucks")
+
+my_state <- "NY"  # CHANGE TO YOUR STATE (e.g., "PA", "CA", "TX")
+
+# Download tract geometries for 2010
+tract <- get_decennial(
+  geography = "tract",
+  variables = "P001001",
+  year = 2010,
+  state = my_state,
+  county = my_counties,
+  geometry = TRUE,
+  progress = FALSE
+)
+
+# Also get county boundaries for mapping
+my_state_counties <- counties(state = my_state, cb = TRUE, progress = FALSE)
+my_metro_counties <- my_state_counties %>%
+  filter(NAME %in% my_counties)
+```
+
+---
+
+# STEP 1: Data Preparation
+
+## Calculate Race/Ethnicity Percentages
+
+```{r calculate_percentages}
+# 1980 data
+census80 <- census80 %>% 
+  filter(POP80 > 0) %>%
+  mutate(
+    perwhite80 = NHWHT80 / POP80,
+    perblack80 = NHBLK80 / POP80,
+    perhisp80 = HISP80 / POP80,
+    perasian80 = ASIAN80 / POP80
+  ) %>%
+  select(TRTID10, perwhite80, perblack80, perhisp80, perasian80)
+
+# 1990 data
+census90 <- census90 %>%
+  filter(POP90 > 0) %>%
+  mutate(
+    perwhite90 = NHWHT90 / POP90,
+    perblack90 = NHBLK90 / POP90,
+    perhisp90 = HISP90 / POP90,
+    perasian90 = ASIAN90 / POP90
+  ) %>%
+  select(TRTID10, state, county, perwhite90, perblack90, perhisp90, perasian90)
+
+# 2000 data
+census00 <- census00 %>%
+  filter(POP00 > 0) %>%
+  mutate(
+    perwhite00 = NHWHT00 / POP00,
+    perblack00 = NHBLK00 / POP00,
+    perhisp00 = HISP00 / POP00,
+    perasian00 = ASIAN00 / POP00
+  ) %>%
+  select(TRTID10, perwhite00, perblack00, perhisp00, perasian00)
+
+# 2010 data
+census10 <- census10 %>%
+  rename(TRTID10 = tractid) %>%
+  mutate(
+    perwhite10 = nhwht10 / pop10,
+    perblack10 = nhblk10 / pop10,
+    perhisp10 = hisp10 / pop10,
+    perasian10 = asian10 / pop10
+  ) %>%
+  select(TRTID10, perwhite10, perblack10, perhisp10, perasian10)
+
+# 2020 data
+census20 <- census20 %>%
+  rename(TRTID10 = TRTID2010) %>%
+  mutate(
+    perwhite20 = nhwt20 / pop20,
+    perblack20 = nhblk20 / pop20,
+    perhisp20 = hisp20 / pop20,
+    perasian20 = asian20 / pop20
+  ) %>%
+  select(TRTID10, perwhite20, perblack20, perhisp20, perasian20)
+```
+
+## Join All Years & Filter to Metro
+
+```{r join_and_filter}
+# Join all decades
+census_all <- census90 %>%
+  left_join(census00, by = "TRTID10") %>%
+  left_join(census10, by = "TRTID10") %>%
+  left_join(census20, by = "TRTID10") %>%
+  left_join(census80, by = "TRTID10")
+
+# CUSTOMIZE: Filter to YOUR metro counties
+# NYC example:
+census_metro <- census_all %>%
+  filter(
+    (state == "NY" & county == "Bronx County") |
+    (state == "NY" & county == "Kings County") |
+    (state == "NY" & county == "New York County") |
+    (state == "NY" & county == "Queens County") |
+    (state == "NY" & county == "Richmond County")
+  )
+
+# YOUR CITY - Example for Philadelphia:
+# census_metro <- census_all %>%
+#   filter(
+#     (state == "PA" & county == "Philadelphia County") |
+#     (state == "PA" & county == "Montgomery County") |
+#     (state == "PA" & county == "Delaware County") |
+#     (state == "PA" & county == "Chester County") |
+#     (state == "PA" & county == "Bucks County")
+#   )
+
+# Remove NAs and unnecessary columns
+census_metro <- census_metro %>%
+  na.omit() %>%
+  select(-state, -county)
+
+# Prepare tract geometries
+tract <- tract %>%
+  select(GEOID, geometry) %>%
+  rename(TRTID10 = GEOID) %>%
+  mutate(TRTID10 = as.double(TRTID10))
+
+# Check results
+cat("Number of tracts in analysis:", nrow(census_metro), "\n")
+```
+
+---
+
+# STEP 2: K-Means Clustering
+
+## Convert to Long Format
+
+```{r reshape_long}
+# Pivot to long format: one row per tract-year
+census_long <- census_metro %>%
+  pivot_longer(
+    cols = starts_with("per"),
+    names_to = c(".value", "year"),
+    names_pattern = "per(\\w+)(\\d{2})"
+  ) %>%
+  mutate(year = case_when(
+    year == "80" ~ 1980,
+    year == "90" ~ 1990,
+    year == "00" ~ 2000,
+    year == "10" ~ 2010,
+    year == "20" ~ 2020,
+    TRUE ~ as.integer(year)
+  ))
+
+# Data for clustering
+data_for_clustering <- census_long %>%
+  select(white, black, hisp, asian)
+```
+
+## Test Multiple K Values
+
+```{r test_k_values}
+# Function to calculate WSS
+wss <- function(k) {
+  kmeans(data_for_clustering, k, nstart = 10)$tot.withinss
+}
+
+# Test k from 1 to 10
+k_values <- 1:10
+wss_values <- map_dbl(k_values, wss)
+
+# Elbow plot
+plot(k_values, wss_values, type = "b", pch = 19, 
+     xlab = "Number of Clusters K",
+     ylab = "Total Within-Cluster Sum of Squares",
+     main = "Elbow Method for Optimal K")
+
+# Silhouette plot
+fviz_nbclust(data_for_clustering, kmeans, method = "silhouette") +
+  labs(title = "Silhouette Method for Optimal K")
+```
+
+## Choose K and Run K-Means
+
+**CUSTOMIZE:** Adjust k based on your elbow plot AND what makes sense for your city
+
+```{r run_kmeans}
+# NYC used k=6. Your city may need different k!
+# Consider:
+# - What does the elbow plot suggest?
+# - How diverse is your metro area?
+# - Do you need to distinguish mixed-race neighborhoods?
+
+k_chosen <- 6  # ADJUST THIS IF NEEDED
+
+set.seed(123)
+kmeans_result <- kmeans(data_for_clustering, 
+                        centers = k_chosen, 
+                        nstart = 25)
+
+# Add cluster assignments
+census_long$cluster <- kmeans_result$cluster
+
+# Examine cluster centroids
+cluster_profiles <- census_long %>%
+  group_by(cluster) %>%
+  summarise(across(c(white, black, hisp, asian), 
+                  ~ round(mean(.), 2)))
+
+kable(cluster_profiles, 
+      caption = "Cluster Profiles: Average Demographics")
+```
+
+## Label Your Clusters
+
+**CUSTOMIZE:** Give meaningful names based on YOUR city's demographics
+
+```{r label_clusters}
+# NYC example labels (based on demographic profiles):
+cluster_labels <- c(
+  "1" = "1 Black",
+  "2" = "2 Hispanic", 
+  "3" = "3 White",
+  "4" = "4 Mixed",
+  "5" = "5 Asian",
+  "6" = "6 Black & Hispanic"
+)
+
+# YOUR CITY: Look at cluster_profiles table above and create YOUR labels
+# Example for different composition:
+# cluster_labels <- c(
+#   "1" = "Majority White",
+#   "2" = "Majority Black",
+#   "3" = "Hispanic Growth",
+#   "4" = "Mixed Race",
+#   "5" = "Asian Emerging",
+#   "6" = "Black-Hispanic"
+# )
+
+census_long$label <- factor(cluster_labels[as.character(census_long$cluster)])
+```
+
+## Visualize Clusters
+
+```{r visualize_clusters}
+# Stacked bar chart of cluster makeup
+cluster_profiles_long <- cluster_profiles %>%
+  pivot_longer(cols = c("white", "black", "hisp", "asian"),
+               names_to = "Demographic", 
+               values_to = "Proportion")
+
+ggplot(cluster_profiles_long, 
+       aes(x = factor(cluster), y = Proportion, fill = Demographic)) +
+  geom_bar(stat = "identity") +
+  labs(title = paste("Cluster Demographic Makeup - k =", k_chosen),
+       x = "Cluster", y = "Proportion") +
+  theme_minimal()
+
+# Map clusters for 2020
+tract_with_clusters <- tract %>%
+  left_join(census_long %>% 
+             filter(year == 2020) %>%
+             select(TRTID10, label),
+            by = "TRTID10")
+
+ggplot(tract_with_clusters) +
+  geom_sf(aes(fill = label), color = NA) +
+  geom_sf(data = my_metro_counties, fill = NA, color = "black", size = 0.5) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "Neighborhood Racial/Ethnic Clusters - 2020",
+       fill = "Cluster") +
+  theme_void()
+```
+
+## Small Multiples: Change Over Time
+
+```{r small_multiples}
+decades <- c(1980, 1990, 2000, 2010, 2020)
+
+tract_all_decades <- tract %>%
+  left_join(census_long %>% select(TRTID10, year, label),
+            by = "TRTID10") %>%
+  filter(!is.na(label)) %>%
+  mutate(year = factor(year, levels = decades))
+
+ggplot(tract_all_decades) +
+  geom_sf(aes(fill = label), color = NA) +
+  geom_sf(data = my_metro_counties, fill = NA, 
+          color = "black", size = 0.5) +
+  facet_wrap(~ year, ncol = 5) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "Racial Cluster Maps by Decade (1980-2020)",
+       fill = "Cluster") +
+  theme_void() +
+  theme(legend.position = "bottom")
+```
+
+**Question:** What spatial patterns do you observe? Where is change occurring?
+
+---
+
+# STEP 3: Sequence Analysis
+
+## Create Sequence Object
+
+```{r create_sequences}
+# Convert to wide format: one row per tract
+census_wide <- census_long %>%
+  select(TRTID10, year, label) %>%
+  pivot_wider(names_from = year, values_from = label) %>%
+  select(TRTID10, `1980`, `1990`, `2000`, `2010`, `2020`)
+
+# Check unique states
+unique_states <- unique(unlist(census_wide[, -1]))
+print(unique_states)
+
+# Create sequence object
+sequence_data <- seqdef(census_wide[, -1])  # Exclude TRTID10
+
+# Check number of distinct sequences
+num_sequences <- seqtab(sequence_data, idx = 0) %>% nrow
+cat("Number of unique sequences:", num_sequences, "\n")
+
+# Display first few sequences
+head(sequence_data)
+```
+
+## Visualize All Sequences
+
+```{r plot_sequences}
+# Index plot: shows all sequences
+seqIplot(sequence_data,
+         with.legend = "right",
+         cex.legend = 0.6,
+         main = "All Neighborhood Trajectories (1980-2020)")
+
+# State distribution plot
+seqdplot(sequence_data, 
+         border = NA,
+         main = "Distribution of Cluster States Over Time")
+
+# Most frequent sequences
+seqfplot(sequence_data,
+         border = NA,
+         main = "Most Frequent Sequences")
+```
+
+**Discuss:** 
+- What's the most common pattern (stability? change?)
+- When do most transitions occur?
+
+---
+
+# STEP 4: Compute Dissimilarity (OMstrans)
+
+```{r compute_dissimilarity}
+# Compute substitution costs based on transition rates
+costs <- seqcost(sequence_data, method = "TRATE")
+
+# View substitution cost matrix
+cat("Substitution Cost Matrix (based on transition frequencies):\n")
+round(costs$sm, 2) %>% 
+  as.data.frame() %>%
+  kable()
+
+# Compute OMstrans dissimilarity
+# Parameters:
+# - method = "OMstran" (emphasizes ORDER of transitions)
+# - otto = 0.1 (low value = more emphasis on sequencing)
+# - indel = 3 (cost of insertion/deletion)
+# - sm = costs$sm (substitution costs from above)
+
+om_distances <- seqdist(sequence_data, 
+                        method = "OMstran",
+                        indel = 3,
+                        sm = costs$sm,
+                        otto = 0.1)
+
+cat("Dissimilarity matrix computed!\n")
+cat("Dimensions:", dim(om_distances), "\n")
+```
+
+**Note:** This may take several minutes for large metros (2000+ tracts)
+
+---
+
+# STEP 5: Hierarchical Clustering of Sequences
+
+## Perform Clustering
+
+```{r hierarchical_clustering}
+# Hierarchical clustering using Ward's method
+clusterward <- agnes(om_distances, diss = TRUE, method = "ward")
+
+# Test different numbers of trajectory clusters
+# Start high (e.g., k=20) and examine
+test_k <- 20
+
+for(k in c(10, 15, 20)) {
+  clusters <- cutree(clusterward, k = k)
+  cat("\nTesting k =", k, "\n")
+  cat("Cluster sizes:", table(clusters), "\n")
+}
+```
+
+## Examine Trajectory Clusters Iteratively
+
+```{r examine_trajectories}
+# Start with k=20 and look at sequence frequency plots
+test_k <- 20
+test_clusters <- cutree(clusterward, k = test_k)
+
+# Function to plot a specific cluster
+plot_cluster <- function(cluster_num) {
+  seqfplot(sequence_data[test_clusters == cluster_num, ],
+           sortv = "from.start",
+           border = NA,
+           main = paste("Test Cluster", cluster_num,
+                       "(n =", sum(test_clusters == cluster_num), ")"))
+}
+
+# Examine clusters 1-5 (do more as needed)
+par(mfrow = c(2, 3))
+for(i in 1:6) {
+  plot_cluster(i)
+}
+par(mfrow = c(1, 1))
+```
+
+**Instructions:**
+1. Look at each cluster's sequence plot
+2. Note which clusters show similar patterns
+3. Merge clusters that are essentially the same trajectory
+4. Stop when you'd have to merge opposite trajectories
+
+## Choose Final K
+
+**CUSTOMIZE:** Adjust based on your iterative examination
+
+```{r final_clustering}
+# NYC settled on k=14. Your city may need more or fewer!
+# Guidelines:
+# - Smaller metros may have 8-12 trajectory types
+# - Larger, more diverse metros may have 15-20
+# - Balance interpretability with granularity
+
+num_clusters <- 14  # ADJUST THIS BASED ON YOUR EXAMINATION
+
+# Final clustering
+final_clusters <- cutree(clusterward, k = num_clusters)
+census_wide$sequence_cluster <- final_clusters
+
+# Cluster sizes
+cat("Final cluster sizes:\n")
+table(final_clusters)
+
+# Validate with silhouette widths
+sil <- silhouette(final_clusters, om_distances)
+cat("\nAverage silhouette width:", round(mean(sil[, "sil_width"]), 3), "\n")
+cat("(Values > 0.25 indicate reasonable clustering)\n")
+```
+
+## Name Your Trajectory Clusters
+
+**CUSTOMIZE:** Give meaningful names after examining sequence plots
+
+```{r name_trajectories}
+# NYC example (k=14):
+trajectory_names <- c(
+  "1" = "Hispanic Majority to Black & Hispanic",
+  "2" = "Stability Cluster",
+  "3" = "White & Mixed Race to Hispanic Majority",
+  "4" = "White to White & Mixed Race to Hispanic Majority",
+  "5" = "Black & Hispanic to Hispanic Majority",
+  "6" = "White Majority to White & Mixed Race",
+  "7" = "White & Mixed Race to Black & Hispanic",
+  "8" = "Black & Hispanic to Black Majority",
+  "9" = "White & Mixed Race to Asian Majority",
+  "10" = "White & Mixed Race to White Majority",
+  "11" = "Black & Hispanic to White & Mixed Race",
+  "12" = "White & Mixed Race to Asian Majority",
+  "13" = "Black Majority to Black & Hispanic",
+  "14" = "Black & Hispanic to Asian Majority"
+)
+
+# YOUR CITY: Create YOUR trajectory names based on sequence plots
+# Example:
+# trajectory_names <- c(
+#   "1" = "Stable White",
+#   "2" = "Stable Black",
+#   "3" = "White to Hispanic",
+#   "4" = "Gentrifying (Black to White)",
+#   ... etc
+# )
+
+census_wide$trajectory_label <- trajectory_names[as.character(census_wide$sequence_cluster)]
+```
+
+---
+
+# STEP 6: Visualize Trajectory Clusters
+
+## Sequence Frequency Plots
+
+```{r sequence_frequency_plots, fig.height=10, fig.width=8}
+# Plot sequence frequency for each trajectory cluster
+par(mfrow = c(4, 4))  # Adjust layout based on num_clusters
+
+for(i in 1:num_clusters) {
+  seqfplot(
+    sequence_data[census_wide$sequence_cluster == i, ],
+    sortv = "from.start",
+    border = NA,
+    main = paste("Cluster", i, "\n", 
+                trajectory_names[as.character(i)],
+                "\n(n =", sum(census_wide$sequence_cluster == i), ")")
+  )
+}
+
+par(mfrow = c(1, 1))
+```
+
+## Map Trajectory Clusters
+
+```{r map_trajectories}
+# Join trajectory clusters to spatial data
+tract_trajectories <- tract %>%
+  left_join(census_wide %>% 
+             select(TRTID10, sequence_cluster, trajectory_label),
+            by = "TRTID10")
+
+# Map all trajectories
+ggplot(tract_trajectories) +
+  geom_sf(aes(fill = factor(sequence_cluster)), color = NA, size = 0.1) +
+  geom_sf(data = my_metro_counties, fill = NA, color = "black", size = 0.5) +
+  scale_fill_viridis_d(option = "turbo") +
+  labs(title = "Neighborhood Trajectory Clusters (1980-2020)",
+       fill = "Trajectory") +
+  theme_void() +
+  theme(legend.position = "right")
+
+# Map specific trajectory types of interest
+# Example: Map just the gentrification trajectories
+# gentrification_clusters <- c(10, 11)  # Adjust to YOUR clusters
+# 
+# tract_gentrification <- tract_trajectories %>%
+#   mutate(is_gentrifying = sequence_cluster %in% gentrification_clusters)
+# 
+# ggplot(tract_gentrification) +
+#   geom_sf(aes(fill = is_gentrifying), color = NA) +
+#   scale_fill_manual(values = c("gray90", "darkred"),
+#                     labels = c("Other", "Gentrifying")) +
+#   labs(title = "Gentrification Trajectories") +
+#   theme_void()
+```
+
+---
+
+# STEP 7: Analysis & Interpretation
+
+## Summary Statistics
+
+```{r summary_stats}
+# Most common trajectories
+trajectory_counts <- census_wide %>%
+  group_by(trajectory_label) %>%
+  summarise(n_tracts = n()) %>%
+  arrange(desc(n_tracts)) %>%
+  mutate(pct = round(n_tracts / sum(n_tracts) * 100, 1))
+
+kable(trajectory_counts,
+      caption = "Trajectory Cluster Frequencies",
+      col.names = c("Trajectory", "# Tracts", "% of Total"))
+
+# How many tracts remained stable?
+stability_cluster <- 2  # ADJUST if your stability cluster is different
+n_stable <- sum(census_wide$sequence_cluster == stability_cluster)
+pct_stable <- round(n_stable / nrow(census_wide) * 100, 1)
+
+cat("\nStability:", n_stable, "tracts (", pct_stable, "%) remained in same cluster 1980-2020\n")
+```
+
+## Key Findings
+
+**CUSTOMIZE:** Write YOUR city-specific findings
+
+```{r key_findings}
+# Template for findings:
+cat("
+KEY FINDINGS FOR [YOUR CITY]:
+
+1. DECLINE IN [GROUP] NEIGHBORHOODS
+   - In 1980: X% of tracts were majority [group]
+   - In 2020: Y% of tracts were majority [group]
+   
+2. GROWTH IN [GROUP] NEIGHBORHOODS
+   - Primary pathway: [Cluster X] - [describe transition]
+   - Secondary pathway: [Cluster Y] - [describe transition]
+   - Geographic concentration: [where]
+   
+3. GENTRIFICATION PATTERNS
+   - [Number] tracts showed gentrification trajectories
+   - Concentrated in: [neighborhoods/geography]
+   - Timing: Mostly occurred [1990-2000 / 2000-2010 / 2010-2020]
+   
+4. STABILITY
+   - [X]% of neighborhoods showed no change in dominant racial group
+   - Stable [group] neighborhoods located in: [where]
+   - Stable [group] neighborhoods located in: [where]
+   
+5. EMERGING PATTERNS
+   - [Any unique patterns you observe]
+   
+")
+```
+
+
+# STEP 8: Export Results
+
+## Save Data
+
+```{r save_results}
+# Save final dataset with trajectory assignments
+write_csv(census_wide, "output/trajectory_clusters.csv")
+
+# Save spatial data
+st_write(tract_trajectories, 
+         "output/trajectory_map.shp", 
+         delete_dsn = TRUE)
+
+cat("Results saved to output/ folder\n")
+```
+
+## Create Summary Report
+
+```{r summary_report}
+# Summary for portfolio or presentation
+summary_stats <- list(
+  metro_area = "[YOUR CITY NAME]",
+  n_tracts = nrow(census_wide),
+  years_analyzed = "1980-2020",
+  k_clusters = k_chosen,
+  n_trajectories = num_clusters,
+  pct_stable = pct_stable,
+  most_common_trajectory = trajectory_counts$trajectory_label[1]
+)
+
+```
+
+---
+
+# Reflection
+
+## What did you learn?
+
+1. **About the method:**
+   - What was most challenging?
+   - What surprised you about the OMstrans approach?
+   - How did choosing k affect your results?
+
+2. **About your city:**
+   - What patterns did you expect to see?
+   - What patterns surprised you?
+   - How do your results compare to NYC?
+
+3. **About policy applications:**
+   - How could this inform interventions?
+   - What are the ethical considerations?
+   - How might prediction interact with these trajectories?
+
+Write your reflection here:
+
+```
+[YOUR REFLECTION]
+```
+
+---
+
+
+# References & Resources
+
+**Tutorial:**
+- https://ericdelmelle.github.io/sequencePaper/
+
+**Key Papers:**
+- Delmelle (2017): Differentiating pathways of neighborhood change
+- Delmelle (2016): Mapping the DNA of urban neighborhoods
+
+**R Packages:**
+- TraMineR: https://traminer.unige.ch/
+- tidycensus: https://walker-data.com/tidycensus/
+
+**Data:**
+- LTDB: https://s4.ad.brown.edu/projects/diversity/Researcher/Bridging.htm
+- Census API: https://api.census.gov/data/key_signup.html
+
+---
+
+*This analysis was completed for MUSA 5080: Public Policy Analytics at the University of Pennsylvania.*
