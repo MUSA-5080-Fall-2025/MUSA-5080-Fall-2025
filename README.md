@@ -22,6 +22,7 @@
 - [Week 9: Predictive Policing, Dirty Data, and Count Regression](https://musa-5080-fall-2025.github.io/MUSA-5080-Fall-2025/lectures/week-09/lecture/Week9_slides.html)
 - [Week 10: Logistic Regression - The case of recidivism](https://musa-5080-fall-2025.github.io/MUSA-5080-Fall-2025/lectures/week-10/lecture/week10_slides.html)
 - [Week 11: Space-Time Modeling: Predicting Bike Share](https://musa-5080-fall-2025.github.io/MUSA-5080-Fall-2025/lectures/week-11/lecture/week11-slides.html)
+- [Week 12: K-means and Sequence Analysis for Neighborhood Change](https://musa-5080-fall-2025.github.io/MUSA-5080-Fall-2025/lectures/week-12/lecture/week12-slides.html)
 ## Labs 
 - [Lab setup instructions](https://musa-5080-fall-2025.github.io/MUSA-5080-Fall-2025/labs/lab_setup_instructions.html)
 - [Lab 0 Template](labs/lab_0/lab0_template.qmd)
@@ -30,6 +31,7 @@
 - [Lab 4 Instructions](labs/lab_4/Assignment4_Instructions.md)
 - [Lab 5 Instructions](labs/lab5/Lab_5_Instructions.md)
 - [Mid Term instructions](https://musa-5080-fall-2025.github.io/MUSA-5080-Fall-2025/labs/midterm/Midterm_2025.html)
+- [Final instructions](https://musa-5080-fall-2025.github.io/MUSA-5080-Fall-2025/labs/final/final_project_instructions.html)
 
 ## GitHub Resources
 - [GitHub Desktop Docs](https://docs.github.com/en/desktop)
