@@ -5,7 +5,7 @@
 
 ## Assignment Overview
 
-In this lab, you will apply the spatial predictive modeling techniques demonstrated in the class exercise using a different 311 service request type of your choice as the predictor variable. You will build a complete spatial predictive model, document your process, and interpret your results.
+In this lab, you will apply the spatial predictive modeling techniques demonstrated in the class exercise using a different 311 service request type of your choice as the primary explanatory variable. You will build a complete spatial predictive model, document your process, and interpret your results.
 
 ### Timeline & Deliverables
 
