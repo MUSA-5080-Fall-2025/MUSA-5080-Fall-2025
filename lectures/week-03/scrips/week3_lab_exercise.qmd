@@ -116,8 +116,12 @@ head(income_concept)
 
 ```{r}
 # Search for multiple terms at once
+# housing_vars <- acs_vars_2022 %>%
+#   filter(str_detect(label, "[Mm]edian.*(rent|value)"))
+
+# Detect exact words (rent or values)
 housing_vars <- acs_vars_2022 %>%
-  filter(str_detect(label, "[Mm]edian.*(rent|value)"))
+  filter(str_detect(label, "(?i)median.*\\b(rent|value)\\b"))
 
 print("Housing cost variables:")
 head(housing_vars, 10)
