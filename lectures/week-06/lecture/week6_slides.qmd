@@ -1204,11 +1204,11 @@ boston.sf <- boston %>%
 crimes.sf <- bostonCrimes %>%
   filter(UCR_PART == "Part One", Lat > -1, !is.na(Lat), !is.na(Long)) %>%
   st_as_sf(coords = c("Long", "Lat"), crs = "EPSG:4326") %>%
-  st_transform('ESRI:102286') %>%
+  st_transform('ESRI:102286') %>%  #unit is in meter
   distinct()
 
 nhoods <- st_read(here("data/BPDA_Neighborhood_Boundaries.geojson")) %>%
-  st_transform('ESRI:102286')
+  st_transform('ESRI:102286') #unit is in meter
 
 # Quick check - these should all be similar numbers
 st_bbox(boston.sf)
@@ -1274,11 +1274,11 @@ ggplot() +
 boston.sf <- boston.sf %>%
   mutate(
     crimes.Buffer = lengths(st_intersects(
-      st_buffer(geometry, 660),
+      st_buffer(geometry, 660),  # unit is in meter
       crimes.sf
     )),
-    crimes_500ft = lengths(st_intersects(
-      st_buffer(geometry, 500),
+    crimes_500m = lengths(st_intersects(
+      st_buffer(geometry, 500),   # unit is in meter in ESRI:102286 projected coordinate system
       crimes.sf
     ))
   )
@@ -1330,7 +1330,7 @@ summary(boston.sf %>% st_drop_geometry() %>% select(starts_with("crime_nn")))
 ```
 
 ::: {.callout-note}
-Interpretation: crime_nn3 = 83.29 means the average distance to the 3 nearest crimes is 83.29 feet
+Interpretation: crime_nn3 = 83.29 means the average distance to the 3 nearest crimes is 83.29 meters
 :::
 
 ---
