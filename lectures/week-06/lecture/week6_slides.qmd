@@ -1401,7 +1401,7 @@ feature_summary <- tribble(
   ~Feature, ~Type, ~"What it Measures",
   "crimes.Buffer (660ft)", "Buffer count", "Number of crimes near house",
   "crimes_500m", "Buffer count", "Crimes within 500 meters",
-  "crime_nn3", "kNN distance", "Avg distance to 3 nearest crimes (ft)",
+  "crime_nn3", "kNN distance", "Avg distance to 3 nearest crimes (meters)",
   "dist_downtown_m", "Point distance", "Meters from downtown Boston"
 )
 
@@ -1653,13 +1653,13 @@ cv_m1 <- train(
 
 # Model 2: + Spatial
 cv_m2 <- train(
-  SalePrice ~ LivingArea + Age + R_FULL_BTH + crimes_500ft + crime_nn3,
+  SalePrice ~ LivingArea + Age + R_FULL_BTH + crimes_500m + crime_nn3,
   data = boston.sf, method = "lm", trControl = ctrl
 )
 
 # Model 3: + Fixed Effects (BUT WAIT - there's a (potential) problem!)
 cv_m3 <- train(
-  SalePrice ~ LivingArea + Age + R_FULL_BTH + crimes_500ft + crime_nn3 + 
+  SalePrice ~ LivingArea + Age + R_FULL_BTH + crimes_500m + crime_nn3 + 
               as.factor(name),
   data = boston.sf, method = "lm", trControl = ctrl
 )

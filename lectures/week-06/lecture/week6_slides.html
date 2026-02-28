@@ -1752,9 +1752,9 @@ crime_nn5 -0.09599580</code></pre>
 <div class="cell-output-display">
 <table class="caption-top">
 <colgroup>
-<col style="width: 29%">
-<col style="width: 20%">
-<col style="width: 50%">
+<col style="width: 27%">
+<col style="width: 18%">
+<col style="width: 53%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -1777,7 +1777,7 @@ crime_nn5 -0.09599580</code></pre>
 <tr class="odd">
 <td style="text-align: left;">crime_nn3</td>
 <td style="text-align: left;">kNN distance</td>
-<td style="text-align: left;">Avg distance to 3 nearest crimes (ft)</td>
+<td style="text-align: left;">Avg distance to 3 nearest crimes (meters)</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">dist_downtown_m</td>
@@ -2090,13 +2090,13 @@ Note:                                                                         *p
 <span id="cb93-9"><a href=""></a></span>
 <span id="cb93-10"><a href=""></a><span class="co"># Model 2: + Spatial</span></span>
 <span id="cb93-11"><a href=""></a>cv_m2 <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
-<span id="cb93-12"><a href=""></a>  SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> R_FULL_BTH <span class="sc">+</span> crimes_500ft <span class="sc">+</span> crime_nn3,</span>
+<span id="cb93-12"><a href=""></a>  SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> R_FULL_BTH <span class="sc">+</span> crimes_500m <span class="sc">+</span> crime_nn3,</span>
 <span id="cb93-13"><a href=""></a>  <span class="at">data =</span> boston.sf, <span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">trControl =</span> ctrl</span>
 <span id="cb93-14"><a href=""></a>)</span>
 <span id="cb93-15"><a href=""></a></span>
 <span id="cb93-16"><a href=""></a><span class="co"># Model 3: + Fixed Effects (BUT WAIT - there's a (potential) problem!)</span></span>
 <span id="cb93-17"><a href=""></a>cv_m3 <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
-<span id="cb93-18"><a href=""></a>  SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> R_FULL_BTH <span class="sc">+</span> crimes_500ft <span class="sc">+</span> crime_nn3 <span class="sc">+</span> </span>
+<span id="cb93-18"><a href=""></a>  SalePrice <span class="sc">~</span> LivingArea <span class="sc">+</span> Age <span class="sc">+</span> R_FULL_BTH <span class="sc">+</span> crimes_500m <span class="sc">+</span> crime_nn3 <span class="sc">+</span> </span>
 <span id="cb93-19"><a href=""></a>              <span class="fu">as.factor</span>(name),</span>
 <span id="cb93-20"><a href=""></a>  <span class="at">data =</span> boston.sf, <span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">trControl =</span> ctrl</span>
 <span id="cb93-21"><a href=""></a>)</span>
@@ -2286,7 +2286,7 @@ South Boston      112  ✓ Safe</code></pre>
 <span id="cb101-20"><a href=""></a><span class="co"># 5. Report</span></span>
 <span id="cb101-21"><a href=""></a><span class="fu">cat</span>(<span class="st">"10-fold CV RMSE:"</span>, <span class="fu">round</span>(model<span class="sc">$</span>results<span class="sc">$</span>RMSE, <span class="dv">0</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>10-fold CV RMSE: 354838 </code></pre>
+<pre><code>10-fold CV RMSE: 359195 </code></pre>
 </div>
 </div>
 </section>
@@ -2329,9 +2329,9 @@ South Boston      112  ✓ Safe</code></pre>
 <span id="cb103-34"><a href=""></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>            Model     RMSE
-1      Structural 537301.4
-2       + Spatial 501809.5
-3 + Fixed Effects 357613.7</code></pre>
+1      Structural 535924.4
+2       + Spatial 508535.0
+3 + Fixed Effects 353242.4</code></pre>
 </div>
 </div>
 </section>
