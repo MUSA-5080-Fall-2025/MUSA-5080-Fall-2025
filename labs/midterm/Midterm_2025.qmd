@@ -110,7 +110,7 @@ format:
 
 ### Primary Dataset: Philadelphia Property Sales
 
-**Source:**:[Philadelphia Property Sales](https://catalog.data.gov/dataset/philadelphia-properties-and-assessment-history)
+**Source:**[Philadelphia Property Sales](https://catalog.data.gov/dataset/philadelphia-properties-and-assessment-history)
 
 **Directory:** [City of Philadelphia](https://metadata.phila.gov/#home/datasetdetails/5543865f20583086178c4ee5/representationdetails/55d624fdad35c7e854cb21a4/)
 
