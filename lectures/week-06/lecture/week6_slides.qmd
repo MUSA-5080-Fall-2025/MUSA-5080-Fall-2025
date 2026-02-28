@@ -1368,12 +1368,11 @@ downtown <- st_sfc(st_point(c(-71.0656, 42.3551)), crs = "EPSG:4326") %>%
 # Calculate distance from each house to downtown
 boston.sf <- boston.sf %>%
   mutate(
-    dist_downtown_ft = as.numeric(st_distance(geometry, downtown)),
-    dist_downtown_mi = dist_downtown_ft / 5280
+    dist_downtown_m = as.numeric(st_distance(geometry, downtown))
   )
 
 # Summary
-summary(boston.sf$dist_downtown_mi)
+summary(boston.sf$dist_downtown_m)
 ```
 
 ---
@@ -1387,7 +1386,7 @@ summary(boston.sf$dist_downtown_mi)
 # Summary of all spatial features created
 spatial_summary <- boston.sf %>%
   st_drop_geometry() %>%
-  select(crimes.Buffer, crimes_500ft, crime_nn3, dist_downtown_mi) %>%
+  select(crimes.Buffer, crimes_500m, crime_nn3, dist_downtown_m) %>%
   summary()
 
 spatial_summary
@@ -1401,9 +1400,9 @@ spatial_summary
 feature_summary <- tribble(
   ~Feature, ~Type, ~"What it Measures",
   "crimes.Buffer (660ft)", "Buffer count", "Number of crimes near house",
-  "crimes_500ft", "Buffer count", "Crimes within 500ft",
+  "crimes_500m", "Buffer count", "Crimes within 500 meters",
   "crime_nn3", "kNN distance", "Avg distance to 3 nearest crimes (ft)",
-  "dist_downtown_mi", "Point distance", "Miles from downtown Boston"
+  "dist_downtown_m", "Point distance", "Meters from downtown Boston"
 )
 
 knitr::kable(feature_summary, align = c('l', 'l', 'l'))
@@ -1426,7 +1425,7 @@ model_structural <- lm(SalePrice ~ LivingArea + R_BDRMS + Age,
 
 # Model 2: Add spatial features
 model_spatial <- lm(SalePrice ~ LivingArea + R_BDRMS + Age +
-                    crimes_500ft + crime_nn3 + dist_downtown_mi,
+                    crimes_500m + crime_nn3 + dist_downtown_m,
                     data = boston.sf)
 
 # Compare
@@ -1475,7 +1474,7 @@ cat("Improvement:", round(summary(model_spatial)$r.squared -
 # Add neighborhood fixed effects
 reg5 <- lm(
   SalePrice ~ LivingArea + Age + 
-              crimes_500ft + 
+              crimes_500m + 
               parks_nn3 + 
               as.factor(name),  # FE
   data = boston.sf
@@ -1570,7 +1569,7 @@ reg3 <- lm(SalePrice ~ LivingArea + Age + R_FULL_BTH,
 
 # Model 4: Add Spatial Features  
 reg4 <- lm(SalePrice ~ LivingArea + Age + R_FULL_BTH +
-                       crimes_500ft + crime_nn3+ dist_downtown_mi,
+                       crimes_500m + crime_nn3+ dist_downtown_m,
            data = boston.sf)
 
 boston.sf <- boston.sf %>%
@@ -1578,7 +1577,7 @@ boston.sf <- boston.sf %>%
 
 # Model 5: Add Fixed Effects
 reg5 <- lm(SalePrice ~ LivingArea + Age + R_FULL_BTH +
-                       crimes_500ft + crime_nn3+ dist_downtown_mi +
+                       crimes_500m + crime_nn3+ dist_downtown_m +
                        as.factor(name),
            data = boston.sf)
 library(stargazer)
@@ -1709,7 +1708,7 @@ When neighborhoods have **very few sales** (<10), random CV splits can put all i
 #| eval: false
 
 # ALWAYS run this before CV with categorical variables
-category_check %
+category_check %>%
   st_drop_geometry() %>%
   count(name) %>%
   arrange(n)
@@ -1759,7 +1758,7 @@ boston.sf <- boston.sf %>%
 
 # Step 3: Use grouped version in CV
 cv_model_fe <- train(
-  SalePrice ~ LivingArea + Age + crimes_500ft + 
+  SalePrice ~ LivingArea + Age + crimes_500m + 
               as.factor(name_cv),   # Use name_cv, not name!
   data = boston.sf,
   method = "lm",
@@ -1780,15 +1779,15 @@ cv_model_fe <- train(
 #| eval: false
 
 # Remove neighborhoods with < 10 sales
-neighborhood_counts %
+neighborhood_counts %>%
   st_drop_geometry() %>%
   count(name)
 
-keep_neighborhoods %
+keep_neighborhoods %>%
   filter(n >= 10) %>%
   pull(name)
 
-boston_filtered %
+boston_filtered %>%
   filter(name %in% keep_neighborhoods)
 
 cat("Removed", nrow(boston.sf) - nrow(boston_filtered), "observations")
@@ -1826,7 +1825,7 @@ ctrl <- trainControl(method = "cv", number = 10)
 
 # 4. Use grouped neighborhoods in ALL models with FE
 model <- train(
-  SalePrice ~ LivingArea + Age + crimes_500ft + as.factor(name_cv),
+  SalePrice ~ LivingArea + Age + crimes_500m + as.factor(name_cv),
   data = boston.sf,
   method = "lm",
   trControl = ctrl
@@ -1861,12 +1860,12 @@ cv_structural <- train(
 )
 
 cv_spatial <- train(
-  SalePrice ~ LivingArea + Age + R_FULL_BTH + crimes_500ft + crime_nn3,
+  SalePrice ~ LivingArea + Age + R_FULL_BTH + crimes_500m + crime_nn3,
   data = boston.sf, method = "lm", trControl = ctrl
 )
 
 cv_fixedeffects <- train(
-  SalePrice ~ LivingArea + Age + R_FULL_BTH + crimes_500ft + crime_nn3 + 
+  SalePrice ~ LivingArea + Age + R_FULL_BTH + crimes_500m + crime_nn3 + 
               as.factor(name_cv),
   data = boston.sf, method = "lm", trControl = ctrl
 )
